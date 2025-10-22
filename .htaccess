@@ -1,0 +1,54 @@
+# -------------------------------------------------
+# Enable rewrite engine
+# -------------------------------------------------
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Send all requests to index.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>
+
+# -------------------------------------------------
+# Protect sensitive files from web access
+# -------------------------------------------------
+# Block .env file
+<Files ".env">
+    Require all denied
+</Files>
+
+# Block .htaccess itself
+<Files ".htaccess">
+    Require all denied
+</Files>
+
+# Block backup/config files
+<FilesMatch "\.(bak|config|sql|fla|psd|ini|log|sh)$">
+    Require all denied
+</FilesMatch>
+
+# Block Git/SVN folders
+RedirectMatch 403 /\.git
+RedirectMatch 403 /\.svn
+
+# -------------------------------------------------
+# Block core folders from direct access
+# -------------------------------------------------
+RedirectMatch 403 ^/application/
+RedirectMatch 403 ^/system/
+
+# -------------------------------------------------
+# Disable directory listing
+# -------------------------------------------------
+Options -Indexes
+
+# -------------------------------------------------
+# Security headers (optional but recommended)
+# -------------------------------------------------
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

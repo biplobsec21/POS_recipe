@@ -1,0 +1,1 @@
+[04-Jul-2025 08:26:41 Asia/Dhaka] PHP Fatal error:  Allowed memory size of 461373440 bytes exhausted (tried to allocate 132120592 bytes) in /home/adoralab/otol56.ramksofttech.com/system/database/drivers/mysqli/mysqli_utility.php on line 196
