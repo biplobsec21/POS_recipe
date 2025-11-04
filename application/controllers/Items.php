@@ -134,7 +134,12 @@ class Items extends MY_Controller
 													<i class="fa fa-fw fa-edit text-blue"></i>Edit
 												</a>
 											</li>';
-
+			if ($this->permissions('items_view'))
+				$str2 .= '<li>
+					<a title="Stock History" href="' . base_url('items/stock_history/' . $items->id) . '">
+						<i class="fa fa-fw fa-history text-green"></i>Stock History
+					</a>
+				</li>';
 			if ($this->permissions('items_delete'))
 				$str2 .= '<li>
 												<a style="cursor:pointer" title="Delete Record ?" onclick="delete_items(' . $items->id . ')">
@@ -144,6 +149,7 @@ class Items extends MY_Controller
 											
 										</ul>
 									</div>';
+
 			$row[] = $str2;
 
 			$data[] = $row;
@@ -251,5 +257,60 @@ class Items extends MY_Controller
 	public function getItems($id = '')
 	{
 		echo $this->items->getItemsJson($id);
+	}
+	// Add this method to your Items controller
+	public function stock_history($item_id)
+	{
+		$this->permission_check('items_view');
+		$data = $this->data;
+
+		// Load the stock history model
+		$this->load->model('stock_history_model');
+
+		// Get item details
+		$item_info = $this->stock_history_model->get_item_details($item_id);
+		if (!$item_info) {
+			show_404();
+		}
+
+		$data['item_info'] = $item_info;
+		$data['stock_summary'] = $this->stock_history_model->get_stock_summary($item_id);
+		$data['transactions'] = $this->stock_history_model->get_transaction_history($item_id, 0, 1000);
+
+		// Check if we got any data
+		if (empty($data['transactions']) && !$this->input->is_ajax_request()) {
+			$this->session->set_flashdata('warning', 'No transaction history found for this item.');
+		}
+
+		$data['page_title'] = "Stock History" . ' - ' . $item_info->item_name;
+		$data['q_id'] = $item_id;
+
+		$this->load->view('stock_history', $data);
+	}
+	// AJAX method for paginated transactions
+	// AJAX method for paginated transactions
+	public function ajax_stock_history()
+	{
+		$this->permission_check('items_view');
+
+		$item_id = $this->input->get('item_id');
+		$start = $this->input->get('start') ?? 0;
+		$length = $this->input->get('length') ?? 25;
+
+		$this->load->model('stock_history_model');
+
+		$transactions = $this->stock_history_model->get_transaction_history($item_id, $start, $length);
+		$total_count = $this->stock_history_model->count_total_transactions($item_id);
+
+		// Format dates for JSON response
+		foreach ($transactions as $transaction) {
+			$transaction->transaction_date = date('d-m-Y h:i A', strtotime($transaction->transaction_date));
+		}
+
+		echo json_encode([
+			'data' => $transactions,
+			'recordsTotal' => $total_count,
+			'recordsFiltered' => $total_count
+		]);
 	}
 }
