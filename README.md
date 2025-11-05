@@ -47,7 +47,9 @@ A comprehensive stock tracking and transaction history module that provides comp
    # Customer Ledger Management System
 
 A comprehensive customer account management system built with CodeIgniter that provides detailed financial tracking, transaction history, and advanced reporting capabilities.
-![Uploading Customer-Ledger-11-05-2025_04_24_PM.png…]()
+
+<img width="1920" height="2117" alt="Customer-Ledger-11-05-2025_04_24_PM" src="https://github.com/user-attachments/assets/0d48104f-5bb1-491c-9211-712cf3665130" />
+
 
 ## 🌟 Features
 
