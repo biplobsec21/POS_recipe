@@ -6,6 +6,9 @@
 
 A comprehensive stock tracking and transaction history module that provides complete audit trails for inventory movements in CodeIgniter applications.
 
+<img width="1920" height="1656" alt="Stock-History-op1-11-05-2025_04_07_AM" src="https://github.com/user-attachments/assets/2eee66f4-d6ef-4f21-a6d3-7e5d425e2c10" />
+
+
 ## ✨ Features
 
 ### 📊 Core Functionality
@@ -44,6 +47,7 @@ A comprehensive stock tracking and transaction history module that provides comp
    # Customer Ledger Management System
 
 A comprehensive customer account management system built with CodeIgniter that provides detailed financial tracking, transaction history, and advanced reporting capabilities.
+![Uploading Customer-Ledger-11-05-2025_04_24_PM.png…]()
 
 ## 🌟 Features
 
