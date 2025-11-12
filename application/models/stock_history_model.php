@@ -9,6 +9,7 @@ class Stock_history_model extends CI_Model
     }
 
     // Get comprehensive stock summary
+    // In Stock_history_model - update get_stock_summary method
     public function get_stock_summary($item_id)
     {
         $summary = array(
@@ -33,68 +34,71 @@ class Stock_history_model extends CI_Model
 
         // Total Purchase
         $query = $this->db->query("
-            SELECT COALESCE(SUM(pi.purchase_qty), 0) as total 
-            FROM db_purchaseitems pi 
-            JOIN db_purchase p ON p.id = pi.purchase_id 
-            WHERE pi.item_id = $item_id AND p.status = 1
-        ");
+        SELECT COALESCE(SUM(pi.purchase_qty), 0) as total 
+        FROM db_purchaseitems pi 
+        JOIN db_purchase p ON p.id = pi.purchase_id 
+        WHERE pi.item_id = $item_id AND p.status = 1
+    ");
         if ($query) $summary['total_purchase'] = $query->row()->total;
 
         // Total Sold
         $query = $this->db->query("
-            SELECT COALESCE(SUM(si.sales_qty), 0) as total 
-            FROM db_salesitems si 
-            JOIN db_sales s ON s.id = si.sales_id 
-            WHERE si.item_id = $item_id AND s.status = 1
-        ");
+        SELECT COALESCE(SUM(si.sales_qty), 0) as total 
+        FROM db_salesitems si 
+        JOIN db_sales s ON s.id = si.sales_id 
+        WHERE si.item_id = $item_id AND s.status = 1
+    ");
         if ($query) $summary['total_sold'] = $query->row()->total;
 
         // Opening Stock (from stock entry)
         $query = $this->db->query("
-            SELECT COALESCE(SUM(qty), 0) as total 
-            FROM db_stockentry 
-            WHERE item_id = $item_id AND status = 1
-        ");
+        SELECT COALESCE(SUM(qty), 0) as total 
+        FROM db_stockentry 
+        WHERE item_id = $item_id AND status = 1
+    ");
         if ($query) $summary['opening_stock'] = $query->row()->total;
 
         // Sales Returns
         $query = $this->db->query("
-            SELECT COALESCE(SUM(sr.return_qty), 0) as total 
-            FROM db_salesitemsreturn sr 
-            JOIN db_salesreturn s ON s.id = sr.return_id 
-            WHERE sr.item_id = $item_id AND s.status = 1
-        ");
+        SELECT COALESCE(SUM(sr.return_qty), 0) as total 
+        FROM db_salesitemsreturn sr 
+        JOIN db_salesreturn s ON s.id = sr.return_id 
+        WHERE sr.item_id = $item_id AND s.status = 1
+    ");
         if ($query) $summary['total_sell_return'] = $query->row()->total;
 
         // Purchase Returns
         $query = $this->db->query("
-            SELECT COALESCE(SUM(pr.return_qty), 0) as total 
-            FROM db_purchaseitemsreturn pr 
-            JOIN db_purchasereturn p ON p.id = pr.return_id 
-            WHERE pr.item_id = $item_id AND p.status = 1
-        ");
+        SELECT COALESCE(SUM(pr.return_qty), 0) as total 
+        FROM db_purchaseitemsreturn pr 
+        JOIN db_purchasereturn p ON p.id = pr.return_id 
+        WHERE pr.item_id = $item_id AND p.status = 1
+    ");
         if ($query) $summary['total_purchase_return'] = $query->row()->total;
 
-        // Production Output
+        // Production Output (now captured in stock entries)
         $query = $this->db->query("
-            SELECT COALESCE(SUM(qty), 0) as total 
-            FROM inventory_movements 
-            WHERE item_id = $item_id AND type = 'PRODUCTION_OUTPUT'
-        ");
+        SELECT COALESCE(SUM(se.qty), 0) as total 
+        FROM db_stockentry se 
+        WHERE se.item_id = $item_id 
+        AND se.status = 1 
+        AND se.note LIKE '%Production Output%'
+    ");
         if ($query) $summary['production_output'] = $query->row()->total;
 
         // Production Consumption
         $query = $this->db->query("
-            SELECT COALESCE(SUM(qty), 0) as total 
-            FROM inventory_movements 
-            WHERE item_id = $item_id AND type = 'PRODUCTION_CONSUME'
-        ");
-        if ($query) $summary['production_consumption'] = abs($query->row()->total);
+        SELECT COALESCE(SUM(ABS(im.qty)), 0) as total 
+        FROM inventory_movements im 
+        WHERE im.item_id = $item_id 
+        AND im.type = 'PRODUCTION_CONSUME'
+    ");
+        if ($query) $summary['production_consumption'] = $query->row()->total;
 
         return $summary;
     }
 
-    // Get detailed transaction history with running balance - FIXED COLLATION ISSUE
+    // In Stock_history_model - update the get_transaction_history method
     public function get_transaction_history($item_id, $start = 0, $length = 1000)
     {
         // Use individual queries instead of UNION to avoid collation issues
@@ -102,17 +106,17 @@ class Stock_history_model extends CI_Model
 
         // 1. Sales Transactions
         $this->db->select("
-            'Sell' as type,
-            -si.sales_qty as quantity_change,
-            si.sales_qty as absolute_quantity,
-            s.sales_date as transaction_date,
-            s.sales_code as reference_no,
-            CONCAT(COALESCE(c.customer_name, 'Walk-in Customer'), ' (', COALESCE(c.mobile, 'N/A'), ')') as customer_supplier_info,
-            s.id as source_id,
-            'sales' as source_table,
-            si.id as detail_id,
-            s.sales_date as sort_date
-        ", false);
+        'Sell' as type,
+        -si.sales_qty as quantity_change,
+        si.sales_qty as absolute_quantity,
+        s.sales_date as transaction_date,
+        s.sales_code as reference_no,
+        CONCAT(COALESCE(c.customer_name, 'Walk-in Customer'), ' (', COALESCE(c.mobile, 'N/A'), ')') as customer_supplier_info,
+        s.id as source_id,
+        'sales' as source_table,
+        si.id as detail_id,
+        s.sales_date as sort_date
+    ", false);
         $this->db->from('db_salesitems si');
         $this->db->join('db_sales s', 's.id = si.sales_id', 'left');
         $this->db->join('db_customers c', 'c.id = s.customer_id', 'left');
@@ -125,17 +129,17 @@ class Stock_history_model extends CI_Model
 
         // 2. Purchase Transactions
         $this->db->select("
-            'Purchase' as type,
-            pi.purchase_qty as quantity_change,
-            pi.purchase_qty as absolute_quantity,
-            p.purchase_date as transaction_date,
-            p.purchase_code as reference_no,
-            CONCAT(COALESCE(sp.supplier_name, 'Unknown Supplier'), ' (', COALESCE(sp.mobile, 'N/A'), ')') as customer_supplier_info,
-            p.id as source_id,
-            'purchase' as source_table,
-            pi.id as detail_id,
-            p.purchase_date as sort_date
-        ", false);
+        'Purchase' as type,
+        pi.purchase_qty as quantity_change,
+        pi.purchase_qty as absolute_quantity,
+        p.purchase_date as transaction_date,
+        p.purchase_code as reference_no,
+        CONCAT(COALESCE(sp.supplier_name, 'Unknown Supplier'), ' (', COALESCE(sp.mobile, 'N/A'), ')') as customer_supplier_info,
+        p.id as source_id,
+        'purchase' as source_table,
+        pi.id as detail_id,
+        p.purchase_date as sort_date
+    ", false);
         $this->db->from('db_purchaseitems pi');
         $this->db->join('db_purchase p', 'p.id = pi.purchase_id', 'left');
         $this->db->join('db_suppliers sp', 'sp.id = p.supplier_id', 'left');
@@ -148,17 +152,17 @@ class Stock_history_model extends CI_Model
 
         // 3. Sales Returns
         $this->db->select("
-            'Sell Return' as type,
-            sr.return_qty as quantity_change,
-            sr.return_qty as absolute_quantity,
-            s.return_date as transaction_date,
-            s.return_code as reference_no,
-            CONCAT(COALESCE(c.customer_name, 'Walk-in Customer'), ' (', COALESCE(c.mobile, 'N/A'), ')') as customer_supplier_info,
-            s.id as source_id,
-            'sales_return' as source_table,
-            sr.id as detail_id,
-            s.return_date as sort_date
-        ", false);
+        'Sell Return' as type,
+        sr.return_qty as quantity_change,
+        sr.return_qty as absolute_quantity,
+        s.return_date as transaction_date,
+        s.return_code as reference_no,
+        CONCAT(COALESCE(c.customer_name, 'Walk-in Customer'), ' (', COALESCE(c.mobile, 'N/A'), ')') as customer_supplier_info,
+        s.id as source_id,
+        'sales_return' as source_table,
+        sr.id as detail_id,
+        s.return_date as sort_date
+    ", false);
         $this->db->from('db_salesitemsreturn sr');
         $this->db->join('db_salesreturn s', 's.id = sr.return_id', 'left');
         $this->db->join('db_customers c', 'c.id = s.customer_id', 'left');
@@ -171,17 +175,17 @@ class Stock_history_model extends CI_Model
 
         // 4. Purchase Returns
         $this->db->select("
-            'Purchase Return' as type,
-            -pr.return_qty as quantity_change,
-            pr.return_qty as absolute_quantity,
-            p.return_date as transaction_date,
-            p.return_code as reference_no,
-            CONCAT(COALESCE(sp.supplier_name, 'Unknown Supplier'), ' (', COALESCE(sp.mobile, 'N/A'), ')') as customer_supplier_info,
-            p.id as source_id,
-            'purchase_return' as source_table,
-            pr.id as detail_id,
-            p.return_date as sort_date
-        ", false);
+        'Purchase Return' as type,
+        -pr.return_qty as quantity_change,
+        pr.return_qty as absolute_quantity,
+        p.return_date as transaction_date,
+        p.return_code as reference_no,
+        CONCAT(COALESCE(sp.supplier_name, 'Unknown Supplier'), ' (', COALESCE(sp.mobile, 'N/A'), ')') as customer_supplier_info,
+        p.id as source_id,
+        'purchase_return' as source_table,
+        pr.id as detail_id,
+        p.return_date as sort_date
+    ", false);
         $this->db->from('db_purchaseitemsreturn pr');
         $this->db->join('db_purchasereturn p', 'p.id = pr.return_id', 'left');
         $this->db->join('db_suppliers sp', 'sp.id = p.supplier_id', 'left');
@@ -192,22 +196,22 @@ class Stock_history_model extends CI_Model
         $purchase_returns = $this->db->get();
         if ($purchase_returns) $transactions = array_merge($transactions, $purchase_returns->result());
 
-        // 5. Stock Adjustments
+        // 5. Stock Adjustments (including production outputs)
         $this->db->select("
-            CASE 
-                WHEN se.qty > 0 THEN 'Stock In'
-                ELSE 'Stock Out'
-            END as type,
-            se.qty as quantity_change,
-            ABS(se.qty) as absolute_quantity,
-            se.entry_date as transaction_date,
-            CONCAT('STK-', se.id) as reference_no,
-            COALESCE(se.note, 'Stock Adjustment') as customer_supplier_info,
-            se.id as source_id,
-            'stock_entry' as source_table,
-            se.id as detail_id,
-            se.entry_date as sort_date
-        ", false);
+        CASE 
+            WHEN se.qty > 0 THEN 'Stock In'
+            ELSE 'Stock Out'
+        END as type,
+        se.qty as quantity_change,
+        ABS(se.qty) as absolute_quantity,
+        se.entry_date as transaction_date,
+        CONCAT('STK-', se.id) as reference_no,
+        COALESCE(se.note, 'Stock Adjustment') as customer_supplier_info,
+        se.id as source_id,
+        'stock_entry' as source_table,
+        se.id as detail_id,
+        se.entry_date as sort_date
+    ", false);
         $this->db->from('db_stockentry se');
         $this->db->where('se.item_id', $item_id);
         $this->db->where('se.status', 1);
@@ -216,41 +220,19 @@ class Stock_history_model extends CI_Model
         $stock_entries = $this->db->get();
         if ($stock_entries) $transactions = array_merge($transactions, $stock_entries->result());
 
-        // 6. Production Output
+        // 6. Production Consumption (only show consumption, not output)
         $this->db->select("
-            'Production' as type,
-            im.qty as quantity_change,
-            im.qty as absolute_quantity,
-            im.created_at as transaction_date,
-            CONCAT('PROD-', COALESCE(pb.batch_code, im.reference_id)) as reference_no,
-            CONCAT('Batch: ', COALESCE(pb.batch_code, 'N/A')) as customer_supplier_info,
-            im.id as source_id,
-            'production' as source_table,
-            im.id as detail_id,
-            im.created_at as sort_date
-        ", false);
-        $this->db->from('inventory_movements im');
-        $this->db->join('production_batches pb', 'pb.id = im.reference_id', 'left');
-        $this->db->where('im.item_id', $item_id);
-        $this->db->where('im.type', 'PRODUCTION_OUTPUT');
-        $this->db->order_by('im.created_at', 'DESC');
-        $this->db->order_by('im.id', 'DESC');
-        $production_output = $this->db->get();
-        if ($production_output) $transactions = array_merge($transactions, $production_output->result());
-
-        // 7. Production Consumption
-        $this->db->select("
-            'Production Consume' as type,
-            im.qty as quantity_change,
-            ABS(im.qty) as absolute_quantity,
-            im.created_at as transaction_date,
-            CONCAT('PROD-', COALESCE(pb.batch_code, im.reference_id)) as reference_no,
-            CONCAT('Batch: ', COALESCE(pb.batch_code, 'N/A')) as customer_supplier_info,
-            im.id as source_id,
-            'production_consume' as source_table,
-            im.id as detail_id,
-            im.created_at as sort_date
-        ", false);
+        'Production Consume' as type,
+        im.qty as quantity_change,
+        ABS(im.qty) as absolute_quantity,
+        im.created_at as transaction_date,
+        CONCAT('PROD-', COALESCE(pb.batch_code, im.reference_id)) as reference_no,
+        CONCAT('Batch: ', COALESCE(pb.batch_code, 'N/A')) as customer_supplier_info,
+        im.id as source_id,
+        'production_consume' as source_table,
+        im.id as detail_id,
+        im.created_at as sort_date
+    ", false);
         $this->db->from('inventory_movements im');
         $this->db->join('production_batches pb', 'pb.id = im.reference_id', 'left');
         $this->db->where('im.item_id', $item_id);
@@ -259,6 +241,8 @@ class Stock_history_model extends CI_Model
         $this->db->order_by('im.id', 'DESC');
         $production_consume = $this->db->get();
         if ($production_consume) $transactions = array_merge($transactions, $production_consume->result());
+
+        // REMOVED: Production Output queries since they're redundant with Stock In entries
 
         // Sort all transactions by date
         usort($transactions, function ($a, $b) {
@@ -373,7 +357,7 @@ class Stock_history_model extends CI_Model
         return $total;
     }
 
-    // Count total transactions for pagination
+    // In Stock_history_model - update count_total_transactions method
     public function count_total_transactions($item_id)
     {
         $count = 0;
@@ -414,9 +398,10 @@ class Stock_history_model extends CI_Model
                 ->where('status', 1)
                 ->count_all_results(),
 
-            // Inventory Movements
+            // Production Consumption only (removed production output count)
             $this->db->from('inventory_movements')
                 ->where('item_id', $item_id)
+                ->where('type', 'PRODUCTION_CONSUME')
                 ->count_all_results()
         ];
 

@@ -54,6 +54,11 @@
         .transaction-type-adjustment {
             background: #fff9e6;
         }
+
+        .transaction-type-production {
+            background: #e6ffe6;
+            /* This won't be used anymore */
+        }
     </style>
 </head>
 
