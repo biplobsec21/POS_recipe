@@ -259,8 +259,9 @@ class Customer_ledger_model extends CI_Model
     private function get_customer_payments($customer_id, $start_date, $end_date)
     {
         $this->db->select('sp.id, sp.payment_date as date, sp.payment_type as payment_method, 
-                          sp.payment_note as others, sp.payment,
-                          CONCAT("SP", YEAR(sp.payment_date), "/", sp.id) as reference_no');
+                      sp.payment_note as others, sp.payment,
+                      CONCAT("SP", YEAR(sp.payment_date), "/", sp.id) as reference_no,
+                      s.sales_code as sales_reference'); // Add sales reference for context
         $this->db->from('db_salespayments sp');
         $this->db->join('db_sales s', 's.id = sp.sales_id');
         $this->db->where('s.customer_id', $customer_id);
@@ -276,8 +277,12 @@ class Customer_ledger_model extends CI_Model
             $payment->debit = 0;
             $payment->credit = $payment->payment;
             $payment->location = '';
-            $payment->payment_status = '';
+            $payment->payment_status = 'Paid'; // Set status as Paid for payments
             $payment->items = array();
+            // Add sales reference to notes for context
+            if (empty($payment->others)) {
+                $payment->others = "Payment for " . $payment->sales_reference;
+            }
         }
 
         return $payments;
@@ -287,8 +292,9 @@ class Customer_ledger_model extends CI_Model
     private function get_sales_return_payments($customer_id, $start_date, $end_date)
     {
         $this->db->select('spr.id, spr.payment_date as date, spr.payment_type as payment_method, 
-                          spr.payment_note as others, spr.payment,
-                          CONCAT("RSP", YEAR(spr.payment_date), "/", spr.id) as reference_no');
+                      spr.payment_note as others, spr.payment,
+                      CONCAT("RSP", YEAR(spr.payment_date), "/", spr.id) as reference_no,
+                      sr.return_code as return_reference');
         $this->db->from('db_salespaymentsreturn spr');
         $this->db->join('db_salesreturn sr', 'sr.id = spr.return_id');
         $this->db->where('sr.customer_id', $customer_id);
@@ -304,8 +310,12 @@ class Customer_ledger_model extends CI_Model
             $payment->debit = $payment->payment;
             $payment->credit = 0;
             $payment->location = '';
-            $payment->payment_status = '';
+            $payment->payment_status = 'Paid';
             $payment->items = array();
+            // Add return reference to notes for context
+            if (empty($payment->others)) {
+                $payment->others = "Return payment for " . $payment->return_reference;
+            }
         }
 
         return $return_payments;

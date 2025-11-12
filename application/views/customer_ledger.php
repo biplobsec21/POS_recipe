@@ -178,6 +178,19 @@
             margin-left: 5px;
         }
 
+        .payment-transaction {
+            background-color: #f8fff8 !important;
+        }
+
+        .payment-transaction:hover {
+            background-color: #f0fff0 !important;
+        }
+
+        .text-success {
+            color: #28a745 !important;
+            font-weight: 600;
+        }
+
         @media (max-width: 768px) {
             .global-customer-form {
                 flex-direction: column;
@@ -357,6 +370,7 @@
                             </div>
 
                             <!-- Ledger Details -->
+                            <!-- Replace the entire ledger table section with this updated version -->
                             <div class="box">
                                 <div class="box-header with-border">
                                     <h3 class="box-title">Ledger Details</h3>
@@ -373,7 +387,6 @@
                                                     <th>Date</th>
                                                     <th>Reference No</th>
                                                     <th>Type</th>
-                                                    <th>Location</th>
                                                     <th>Status</th>
                                                     <th>Debit</th>
                                                     <th>Credit</th>
@@ -388,8 +401,12 @@
                                                     foreach ($ledger_data as $transaction):
                                                         $hasItems = !empty($transaction->items) && $transaction->type == 'Sell';
                                                         $itemsJson = $hasItems ? htmlspecialchars(json_encode($transaction->items), ENT_QUOTES, 'UTF-8') : '';
+
+                                                        // Determine if this is a payment transaction for special handling
+                                                        $isPayment = in_array($transaction->type, ['Payment', 'Return Payment']);
                                                 ?>
-                                                        <tr class="<?= $hasItems ? 'has-items' : ''; ?>" data-items='<?= $itemsJson; ?>'>
+                                                        <tr class="<?= $hasItems ? 'has-items' : ''; ?> <?= $isPayment ? 'payment-transaction' : ''; ?>"
+                                                            data-items='<?= $itemsJson; ?>'>
                                                             <td class="details-control">
                                                                 <?php if ($hasItems): ?>
                                                                     <i class="fa fa-chevron-right"></i>
@@ -402,29 +419,34 @@
                                                                     <a href="<?= base_url('sales/invoice/' . substr($transaction->reference_no, 5)); ?>" target="_blank">
                                                                         <?= $transaction->reference_no; ?>
                                                                     </a>
+                                                                <?php elseif ($transaction->type == 'Sales Return'): ?>
+                                                                    <a href="<?= base_url('sales_return/invoice/' . substr($transaction->reference_no, 5)); ?>" target="_blank">
+                                                                        <?= $transaction->reference_no; ?>
+                                                                    </a>
                                                                 <?php else: ?>
                                                                     <?= $transaction->reference_no; ?>
                                                                 <?php endif; ?>
                                                             </td>
                                                             <td>
                                                                 <span class="label 
-                                                                <?= $transaction->type == 'Sell' ? 'label-danger' : ''; ?>
-                                                                <?= $transaction->type == 'Payment' ? 'label-success' : ''; ?>
-                                                                <?= $transaction->type == 'Sales Return' ? 'label-warning' : ''; ?>
-                                                                <?= $transaction->type == 'Opening Balance' ? 'label-info' : ''; ?>
-                                                                <?= $transaction->type == 'Return Payment' ? 'label-primary' : ''; ?>
-                                                            ">
+                                        <?= $transaction->type == 'Sell' ? 'label-danger' : ''; ?>
+                                        <?= $transaction->type == 'Payment' ? 'label-success' : ''; ?>
+                                        <?= $transaction->type == 'Sales Return' ? 'label-warning' : ''; ?>
+                                        <?= $transaction->type == 'Opening Balance' ? 'label-info' : ''; ?>
+                                        <?= $transaction->type == 'Return Payment' ? 'label-primary' : ''; ?>
+                                    ">
                                                                     <?= $transaction->type; ?>
                                                                 </span>
                                                             </td>
-                                                            <td><?= $transaction->location; ?></td>
                                                             <td>
                                                                 <?php if ($transaction->payment_status == 'Paid'): ?>
                                                                     <span class="label label-success">Paid</span>
                                                                 <?php elseif ($transaction->payment_status == 'Pending'): ?>
                                                                     <span class="label label-warning">Pending</span>
+                                                                <?php elseif ($isPayment): ?>
+                                                                    <span class="label label-success">Completed</span>
                                                                 <?php else: ?>
-                                                                    <?= $transaction->payment_status; ?>
+                                                                    <?= $transaction->payment_status ?: '-'; ?>
                                                                 <?php endif; ?>
                                                             </td>
                                                             <td class="debit-amount text-right">
@@ -437,15 +459,32 @@
                                                                 ৳ <?= number_format(abs($transaction->balance), 2); ?>
                                                                 <?= $transaction->balance >= 0 ? 'DR' : 'CR'; ?>
                                                             </td>
-                                                            <td><?= $transaction->payment_method ?: '-'; ?></td>
-                                                            <td><?= $transaction->others ?: '-'; ?></td>
+                                                            <td>
+                                                                <?php if ($isPayment && $transaction->payment_method): ?>
+                                                                    <span class="text-success">
+                                                                        <i class="fa fa-money"></i> <?= $transaction->payment_method; ?>
+                                                                    </span>
+                                                                <?php else: ?>
+                                                                    <?= $transaction->payment_method ?: '-'; ?>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                            <td>
+                                                                <?php if ($isPayment): ?>
+                                                                    <small class="text-muted">
+                                                                        <i class="fa fa-info-circle"></i>
+                                                                        <?= $transaction->others ?: 'Payment received'; ?>
+                                                                    </small>
+                                                                <?php else: ?>
+                                                                    <?= $transaction->others ?: '-'; ?>
+                                                                <?php endif; ?>
+                                                            </td>
                                                         </tr>
                                                     <?php
                                                     endforeach;
                                                 else:
                                                     ?>
                                                     <tr>
-                                                        <td colspan="11" class="text-center">
+                                                        <td colspan="10" class="text-center">
                                                             <div class="empty-state" style="padding: 20px;">
                                                                 <i class="fa fa-info-circle fa-2x"></i>
                                                                 <h4>No transactions found</h4>
@@ -558,28 +597,28 @@
                                 extend: 'copy',
                                 className: 'btn bg-teal color-palette btn-flat',
                                 exportOptions: {
-                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] // Updated: removed location column
                                 }
                             },
                             {
                                 extend: 'excel',
                                 className: 'btn bg-teal color-palette btn-flat',
                                 exportOptions: {
-                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] // Updated: removed location column
                                 }
                             },
                             {
                                 extend: 'pdf',
                                 className: 'btn bg-teal color-palette btn-flat',
                                 exportOptions: {
-                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] // Updated: removed location column
                                 }
                             },
                             {
                                 extend: 'print',
                                 className: 'btn bg-teal color-palette btn-flat',
                                 exportOptions: {
-                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                                    columns: [1, 2, 3, 4, 5, 6, 7, 8, 9] // Updated: removed location column
                                 }
                             },
                             {
@@ -597,9 +636,6 @@
                         ]
                     },
                     /* FOR EXPORT BUTTONS END */
-                    "order": [
-                        [1, 'asc']
-                    ],
                     "pageLength": 50,
                     "responsive": false,
                     "columnDefs": [{
