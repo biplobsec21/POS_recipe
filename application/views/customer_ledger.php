@@ -416,11 +416,11 @@
                                                             <td><?= date('d-m-Y h:i A', strtotime($transaction->date)); ?></td>
                                                             <td>
                                                                 <?php if ($transaction->type == 'Sell'): ?>
-                                                                    <a href="<?= base_url('sales/invoice/' . substr($transaction->reference_no, 5)); ?>" target="_blank">
+                                                                    <a href="<?= base_url('sales/invoice/' . $transaction->sales_id); ?>" target="_blank">
                                                                         <?= $transaction->reference_no; ?>
                                                                     </a>
                                                                 <?php elseif ($transaction->type == 'Sales Return'): ?>
-                                                                    <a href="<?= base_url('sales_return/invoice/' . substr($transaction->reference_no, 5)); ?>" target="_blank">
+                                                                    <a href="<?= base_url('sales_return/invoice/' . $transaction->return_id); ?>" target="_blank">
                                                                         <?= $transaction->reference_no; ?>
                                                                     </a>
                                                                 <?php else: ?>
@@ -636,7 +636,8 @@
                         ]
                     },
                     /* FOR EXPORT BUTTONS END */
-                    "pageLength": 50,
+                    "ordering": false,
+                    "pageLength": 100,
                     "responsive": false,
                     "columnDefs": [{
                         "orderable": false,
