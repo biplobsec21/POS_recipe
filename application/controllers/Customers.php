@@ -17,6 +17,7 @@ class Customers extends MY_Controller
 		$data['page_title'] = $this->lang->line('customers_list');
 		$this->load->view('customers-view', $data);
 	}
+
 	public function add()
 	{
 		$this->permission_check('customers_add');
@@ -92,7 +93,11 @@ class Customers extends MY_Controller
 			$row[] = $customers->mobile;
 			$row[] = $customers->address;
 			$row[] = app_number_format($this->show_total_customer_paid_amount($customers->id));
-			$row[] = (!empty($customers->sales_due) && $customers->sales_due != 0) ? app_number_format($customers->sales_due) : (0);
+
+			// Use calculated sales due instead of stored value
+			$calculated_sales_due = $this->customers->get_calculated_sales_due($customers->id);
+			$row[] = (!empty($calculated_sales_due) && $calculated_sales_due != 0) ? app_number_format($calculated_sales_due) : (0);
+
 			$row[] = ($customers->sales_return_due == null) ? $customers->opening_balance : app_number_format($customers->sales_return_due);
 			$row[] = $this->customers->get_total_due_amount($customers->id);
 
@@ -103,50 +108,58 @@ class Customers extends MY_Controller
 			}
 			$row[] = $str;
 			$str2 = '<div class="btn-group" title="View Account">
-										<a class="btn btn-primary btn-o dropdown-toggle" data-toggle="dropdown" href="#">
-											Action <span class="caret"></span>
-										</a>
-										<ul role="menu" class="dropdown-menu dropdown-light pull-right">';
+                            <a class="btn btn-primary btn-o dropdown-toggle" data-toggle="dropdown" href="#">
+                                Action <span class="caret"></span>
+                            </a>
+                            <ul role="menu" class="dropdown-menu dropdown-light pull-right">';
 
 			if ($this->permissions('customers_edit') && $customers->id != 1)
 				$str2 .= '<li>
-												<a title="Edit Record ?" href="customers/update/' . $customers->id . '">
-													<i class="fa fa-fw fa-edit text-blue"></i>Edit
-												</a>
-											</li>';
-			// In customers-view.php, add to the action dropdown menu:
+                                    <a title="Edit Record ?" href="customers/update/' . $customers->id . '">
+                                        <i class="fa fa-fw fa-edit text-blue"></i>Edit
+                                    </a>
+                                </li>';
+
+			// Add repair option
+			if ($this->permissions('customers_edit') && $customers->id != 1)
+				$str2 .= '<li>
+                                    <a title="Repair Sales Due Calculation" href="' . base_url('customers/repair_customer_sales_due/' . $customers->id) . '" onclick="return confirm(\'Are you sure you want to repair sales due calculation?\')">
+                                        <i class="fa fa-fw fa-refresh text-orange"></i>Repair Sales Due
+                                    </a>
+                                </li>';
+
 			$str2 .= '<li>
-				<a title="Customer Ledger" href="' . base_url('customers/customer_ledger/' . $customers->id) . '">
-					<i class="fa fa-fw fa-book text-purple"></i>Customer Ledger
-				</a>
-			</li>';
+                <a title="Customer Ledger" href="' . base_url('customers/customer_ledger/' . $customers->id) . '">
+                    <i class="fa fa-fw fa-book text-purple"></i>Customer Ledger
+                </a>
+            </li>';
 			$str2 .= '<li>
-												<a title="Edit Record ?" href="customers/allpayments/' . $customers->id . '">
-												<i class="fa fa-fw fa-money text-blue"></i> Customer Payments
-												</a>
-											</li>';
+                                    <a title="Edit Record ?" href="customers/allpayments/' . $customers->id . '">
+                                    <i class="fa fa-fw fa-money text-blue"></i> Customer Payments
+                                    </a>
+                                </li>';
 			if ($this->permissions('sales_payment_add'))
 				$str2 .= '<li>
-												<a title="Pay Opening Balance & Sales Due Payments" class="pointer" onclick="pay_now(' . $customers->id . ')" >
-													<i class="fa fa-fw fa-money text-blue"></i>Receive Due Payments
-												</a>
-											</li>';
+                                    <a title="Pay Opening Balance & Sales Due Payments" class="pointer" onclick="pay_now(' . $customers->id . ')" >
+                                        <i class="fa fa-fw fa-money text-blue"></i>Receive Due Payments
+                                    </a>
+                                </li>';
 			if ($this->permissions('sales_return_payment_add'))
 				$str2 .= '<li>
-												<a title="Pay Return Due" class="pointer" onclick="pay_return_due(' . $customers->id . ')" >
-													<i class="fa fa-fw fa-money text-blue"></i>Pay Return Due
-												</a>
-											</li>';
+                                    <a title="Pay Return Due" class="pointer" onclick="pay_return_due(' . $customers->id . ')" >
+                                        <i class="fa fa-fw fa-money text-blue"></i>Pay Return Due
+                                    </a>
+                                </li>';
 			if ($this->permissions('customers_delete') && $customers->id != 1)
 				$str2 .= '<li>
-												<a style="cursor:pointer" title="Delete Record ?" onclick="delete_customers(' . $customers->id . ')">
-													<i class="fa fa-fw fa-trash text-red"></i>Delete
-												</a>
-											</li>
-											
-										</ul>
+                                    <a style="cursor:pointer" title="Delete Record ?" onclick="delete_customers(' . $customers->id . ')">
+                                        <i class="fa fa-fw fa-trash text-red"></i>Delete
+                                    </a>
+                                </li>
+                                
+                            </ul>
 
-									</div>';
+                        </div>';
 			$row[] =  $str2;
 
 			$data[] = $row;
@@ -160,6 +173,44 @@ class Customers extends MY_Controller
 		);
 		//output to json format
 		echo json_encode($output);
+	}
+
+	// Add repair methods
+	public function repair_customer_sales_due($customer_id = null)
+	{
+		$this->permission_check_with_msg('customers_edit');
+
+		if ($customer_id) {
+			$result = $this->customers->repair_customer_sales_due($customer_id);
+			$this->session->set_flashdata('success', $result);
+		} else {
+			$result = $this->customers->repair_customer_sales_due();
+			$this->session->set_flashdata('success', $result);
+		}
+
+		redirect('customers');
+	}
+
+	public function bulk_repair_sales_due()
+	{
+		$this->permission_check_with_msg('customers_edit');
+
+		$result = $this->customers->repair_customer_sales_due();
+		$this->session->set_flashdata('success', $result);
+
+		redirect('customers');
+	}
+
+	public function check_customer_sales_due($customer_id)
+	{
+		$this->permission_check('customers_view');
+
+		$sales_due_info = $this->customers->calculate_actual_sales_due($customer_id);
+
+		echo json_encode([
+			'success' => true,
+			'data' => $sales_due_info
+		]);
 	}
 	public function update_status()
 	{
@@ -240,7 +291,7 @@ class Customers extends MY_Controller
 
 		// Set default date range to 12 months
 		$start_date = $this->input->get('start_date') ? $this->input->get('start_date') : ($this->input->post('start_date') ? $this->input->post('start_date') :
-			date('01-m-Y', strtotime('-11 months')));
+			date('01-m-Y', strtotime('-36 months')));
 
 		$end_date = $this->input->get('end_date') ? $this->input->get('end_date') : ($this->input->post('end_date') ? $this->input->post('end_date') :
 			date('t-m-Y'));
