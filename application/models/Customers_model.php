@@ -17,34 +17,33 @@ class Customers_model extends CI_Model
 
 	private function _get_datatables_query()
 	{
-		$this->db->select('a.id, a.customer_code, a.customer_name, a.mobile, a.address, a.status, a.opening_balance, a.sales_return_due');
+		$this->db->select($this->column_order);
 		$this->db->from($this->table);
 
-		// Remove heavy columns from initial select
-		// We'll calculate these separately or use cached values
-
 		$i = 0;
-		$search_value = $this->input->post('search')['value'] ?? '';
 
-		if (!empty($search_value)) {
-			$this->db->group_start();
-			foreach ($this->column_search as $item) {
-				if ($i === 0) {
-					$this->db->like($item, $search_value);
+		foreach ($this->column_search as $item) // loop column 
+		{
+			if ($_POST['search']['value']) // if datatable send POST for search
+			{
+
+				if ($i === 0) // first loop
+				{
+					$this->db->group_start(); // open bracket. query Where with OR clause better with bracket. because maybe can combine with other WHERE with AND.
+					$this->db->like($item, $_POST['search']['value']);
 				} else {
-					$this->db->or_like($item, $search_value);
+					$this->db->or_like($item, $_POST['search']['value']);
 				}
-				$i++;
+
+				if (count($this->column_search) - 1 == $i) //last loop
+					$this->db->group_end(); //close bracket
 			}
-			$this->db->group_end();
+			$i++;
 		}
 
-		// Order processing
-		$order_column = $this->input->post('order')[0]['column'] ?? 0;
-		$order_dir = $this->input->post('order')[0]['dir'] ?? 'desc';
-
-		if (isset($this->column_order[$order_column])) {
-			$this->db->order_by($this->column_order[$order_column], $order_dir);
+		if (isset($_POST['order'])) // here order processing
+		{
+			$this->db->order_by($this->column_order[$_POST['order']['0']['column']], $_POST['order']['0']['dir']);
 		} else if (isset($this->order)) {
 			$order = $this->order;
 			$this->db->order_by(key($order), $order[key($order)]);
@@ -78,19 +77,34 @@ class Customers_model extends CI_Model
 	public function calculate_actual_sales_due($customer_id)
 	{
 		$query = $this->db->query("
-			SELECT 
-				c.customer_code,
-				c.customer_name,
-				c.sales_due as stored_sales_due,
-				COALESCE(SUM(s.grand_total), 0) as total_sales,
-				COALESCE(SUM(sp.payment), 0) as total_payments,
-				(COALESCE(SUM(s.grand_total), 0) - COALESCE(SUM(sp.payment), 0)) as calculated_sales_due
-			FROM db_customers c
-			LEFT JOIN db_sales s ON c.id = s.customer_id AND s.status = 1
-			LEFT JOIN db_salespayments sp ON s.id = sp.sales_id AND sp.status = 1
-			WHERE c.id = ?
-			GROUP BY c.id
-		", array($customer_id));
+        SELECT 
+            c.customer_code,
+            c.customer_name,
+            c.sales_due as stored_sales_due,
+            COALESCE((
+                SELECT SUM(grand_total) 
+                FROM db_sales 
+                WHERE customer_id = c.id AND status = 1
+            ), 0) as total_sales,
+            COALESCE((
+                SELECT SUM(payment) 
+                FROM db_salespayments 
+                WHERE sales_id IN (SELECT id FROM db_sales WHERE customer_id = c.id) 
+                AND status = 1
+            ), 0) as total_payments,
+            COALESCE((
+                SELECT SUM(grand_total) 
+                FROM db_sales 
+                WHERE customer_id = c.id AND status = 1
+            ), 0) - COALESCE((
+                SELECT SUM(payment) 
+                FROM db_salespayments 
+                WHERE sales_id IN (SELECT id FROM db_sales WHERE customer_id = c.id) 
+                AND status = 1
+            ), 0) as calculated_sales_due
+        FROM db_customers c
+        WHERE c.id = ?
+    ", array($customer_id));
 
 		return $query->row();
 	}
