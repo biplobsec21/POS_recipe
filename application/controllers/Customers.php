@@ -17,7 +17,6 @@ class Customers extends MY_Controller
 		$data['page_title'] = $this->lang->line('customers_list');
 		$this->load->view('customers-view', $data);
 	}
-
 	public function add()
 	{
 		$this->permission_check('customers_add');
@@ -266,8 +265,6 @@ class Customers extends MY_Controller
 	{
 		echo $this->customers->getCustomersJson($id);
 	}
-	// Add these methods to your existing Customers controller
-
 	// ledger implementation
 	// ledger implementation
 	public function customer_ledger($customer_id = null)

@@ -16,6 +16,15 @@
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
       <!-- Content Header (Page header) -->
+
+      <?php if ($CI->permissions('customers_edit')) { ?>
+        <!--<div class="box-tools pull-right" style="margin-right: 10px;">-->
+        <!--    <a class="btn btn-warning" href="<?php echo $base_url; ?>customers/bulk_repair_sales_due" onclick="return confirm('Are you sure you want to repair sales due calculations for ALL customers?')">-->
+        <!--        <i class="fa fa-refresh"></i> Repair All Sales Due-->
+        <!--    </a>-->
+        <!--</div>-->
+      <?php } ?>
+
       <section class="content-header">
         <h1>
           <?= $page_title; ?>
@@ -41,14 +50,6 @@
           <!-- ********** ALERT MESSAGE START******* -->
           <?php include "comman/code_flashdata.php"; ?>
           <!-- ********** ALERT MESSAGE END******* -->
-
-          <?php if ($CI->permissions('customers_edit')) { ?>
-            <div class="box-tools pull-right" style="margin-right: 10px;">
-              <a class="btn btn-warning" href="<?php echo $base_url; ?>customers/bulk_repair_sales_due" onclick="return confirm('Are you sure you want to repair sales due calculations for ALL customers?')">
-                <i class="fa fa-refresh"></i> Repair All Sales Due
-              </a>
-            </div>
-          <?php } ?>
           <div class="col-xs-12">
             <div class="box">
               <div class="box-header with-border">
