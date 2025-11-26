@@ -327,7 +327,7 @@
                         "data": "type",
                         "render": function(data, type, row) {
                             var labelClass = 'label-default';
-                            if (['Purchase', 'Sell Return', 'Stock In', 'Production'].includes(data)) {
+                            if (['Purchase', 'Sell Return', 'Stock In'].includes(data)) {
                                 labelClass = 'label-success';
                             } else if (['Sell', 'Purchase Return', 'Stock Out', 'Production Consume'].includes(data)) {
                                 labelClass = 'label-danger';
@@ -348,7 +348,9 @@
                     {
                         "data": "new_quantity",
                         "render": function(data, type, row) {
-                            return '<strong>' + parseFloat(data).toFixed(2) + '</strong>';
+                            // Ensure we never show negative stock (clamp at 0)
+                            var displayQty = Math.max(0, parseFloat(data)).toFixed(2);
+                            return '<strong>' + displayQty + '</strong>';
                         }
                     },
                     {
