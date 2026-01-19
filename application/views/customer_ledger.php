@@ -637,7 +637,7 @@
                     },
                     /* FOR EXPORT BUTTONS END */
                     "ordering": false,
-                    "pageLength": 100,
+                    "pageLength": 2000,
                     "responsive": false,
                     "columnDefs": [{
                         "orderable": false,
