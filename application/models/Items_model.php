@@ -52,7 +52,7 @@ class Items_model extends CI_Model
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if (count($this->column_search) - 1 == $i) //last loop
+				if ((int)(count($this->column_search) - 1) === (int)$i) //last loop
 					$this->db->group_end(); //close bracket
 			}
 			$i++;
@@ -70,7 +70,7 @@ class Items_model extends CI_Model
 	function get_datatables()
 	{
 		$this->_get_datatables_query();
-		if ($_POST['length'] != -1)
+		if ((int)$_POST['length'] !== -1)
 			$this->db->limit($_POST['length'], $_POST['start']);
 		$query = $this->db->get();
 		return $query->result();
@@ -187,7 +187,7 @@ class Items_model extends CI_Model
 			return "failed";
 		}
 		$item_id = $this->db->insert_id();
-		if (!empty($new_opening_stock) && $new_opening_stock != 0) {
+		if (!empty($new_opening_stock) && (float)$new_opening_stock !== 0.0) {
 			$q1 = $this->stock_entry($CUR_DATE, $item_id, $new_opening_stock, $adjustment_note);
 			if (!$q1) {
 				return "failed";
@@ -221,7 +221,7 @@ class Items_model extends CI_Model
 	{
 		//Validate This items already exist or not
 		$query = $this->db->query("select * from db_items where upper(id)=upper('$id')");
-		if ($query->num_rows() == 0) {
+		if ($query->num_rows() === 0) {
 			show_404();
 			exit;
 		} else {
@@ -337,7 +337,7 @@ class Items_model extends CI_Model
 		if (!$query1) {
 			return "failed";
 		}
-		if (!empty($new_opening_stock) && $new_opening_stock != 0) {
+		if (!empty($new_opening_stock) && (float)$new_opening_stock !== 0.0) {
 			$q1 = $this->stock_entry($CUR_DATE, $q_id, $new_opening_stock, $adjustment_note);
 			if (!$q1) {
 				return "failed";
@@ -603,7 +603,7 @@ class Items_model extends CI_Model
 			$this->db->where("category_id", $_REQUEST['category_id']);
 		}
 		if (isset($_REQUEST['item_type']) && !empty($_REQUEST['item_type'])) {
-			$service_bit = ($_REQUEST['item_type'] == 'Services') ? 1 : 0;
+			$service_bit = ($_REQUEST['item_type'] === 'Services') ? 1 : 0;
 			$this->db->where("service_bit", $service_bit);
 		}
 

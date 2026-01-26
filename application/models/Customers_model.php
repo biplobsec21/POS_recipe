@@ -35,7 +35,7 @@ class Customers_model extends CI_Model
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if (count($this->column_search) - 1 == $i) //last loop
+				if ((int)(count($this->column_search) - 1) === (int)$i) //last loop
 					$this->db->group_end(); //close bracket
 			}
 			$i++;
@@ -53,7 +53,7 @@ class Customers_model extends CI_Model
 	function get_datatables()
 	{
 		$this->_get_datatables_query();
-		if ($_POST['length'] != -1)
+		if ((int)$_POST['length'] !== -1)
 			$this->db->limit($_POST['length'], $_POST['start']);
 		$query = $this->db->get();
 		return $query->result();
@@ -196,7 +196,7 @@ class Customers_model extends CI_Model
 	{
 		//Validate This customers already exist or not
 		$query = $this->db->query("select * from db_customers where upper(id)=upper('$id')");
-		if ($query->num_rows() == 0) {
+		if ($query->num_rows() === 0) {
 			show_404();
 			exit;
 		} else {
@@ -224,7 +224,7 @@ class Customers_model extends CI_Model
 		//Filtering XSS and html escape from user inputs 
 		extract($this->security->xss_clean(html_escape(array_merge($this->data, $_POST))));
 
-		if ($q_id == 1) {
+		if ($q_id === 1) {
 			echo "Sorry! This Record Restricted! Can't Update";
 			exit();
 		}
@@ -246,7 +246,7 @@ class Customers_model extends CI_Model
 
 	public function update_status($id, $status)
 	{
-		if ($id == 1) {
+		if ($id === 1) {
 			echo "Sorry! This Record Restricted! Can't Update Status";
 			exit();
 		}
@@ -261,7 +261,7 @@ class Customers_model extends CI_Model
 
 	public function delete_customers_from_table($ids)
 	{
-		if ($ids == 1) {
+		if ($ids === 1) {
 			echo "Sorry! This Record Restricted! Can't Delete";
 			exit();
 		}
@@ -450,7 +450,7 @@ class Customers_model extends CI_Model
 
 		$this->load->model('sales_model');
 
-		if ($amount == '' || $amount == 0) {
+		if ($amount === '' || $amount === 0) {
 			$amount = null;
 		}
 
@@ -506,7 +506,7 @@ class Customers_model extends CI_Model
 
 				//Set Sales Payments
 				if ($amount <= $customer_sales_due) {
-					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_sales where grand_total!=paid_amount and customer_id=" . $customer_id);
+					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_sales where grand_total !== paid_amount and customer_id=" . $customer_id);
 					foreach ($qs4->result() as $res) {
 						$grand_total = $res->grand_total;
 						$paid_amount = $res->paid_amount;
@@ -547,7 +547,7 @@ class Customers_model extends CI_Model
 
 						$q3 = $this->db->insert('db_salespayments', $salespayments_entry);
 						$q10 = $this->sales_model->update_sales_payment_status($sales_id, $customer_id);
-						if ($q10 != 1) {
+						if ($q10 !== 1) {
 							return "failed";
 						}
 					}
@@ -722,7 +722,7 @@ class Customers_model extends CI_Model
 
 		$this->load->model('sales_return_model');
 
-		if ($amount == '' || $amount == 0) {
+		if ($amount === '' || $amount === 0) {
 			$amount = null;
 		}
 
@@ -734,7 +734,7 @@ class Customers_model extends CI_Model
 			while ($amount > 0) {
 				//Set Sales Payments
 				if ($amount <= $customer_sales_return_due) {
-					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_salesreturn where grand_total!=paid_amount and customer_id=" . $customer_id);
+					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_salesreturn where grand_total !== paid_amount and customer_id=" . $customer_id);
 					foreach ($qs4->result() as $res) {
 						$grand_total = $res->grand_total;
 						$paid_amount = $res->paid_amount;
@@ -775,7 +775,7 @@ class Customers_model extends CI_Model
 
 						$q3 = $this->db->insert('db_salespaymentsreturn', $salespayments_entry);
 						$q10 = $this->sales_return_model->update_sales_payment_status($return_id, $customer_id);
-						if ($q10 != 1) {
+						if ($q10 !== 1) {
 							return "failed";
 						}
 					}

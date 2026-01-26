@@ -30,7 +30,7 @@ class Currency_model extends CI_Model {
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if(count($this->column_search) - 1 == $i) //last loop
+			if((int)(count($this->column_search) - 1) === (int)$i) //last loop
 					$this->db->group_end(); //close bracket
 			}
 			$i++;
@@ -50,7 +50,7 @@ class Currency_model extends CI_Model {
 	function get_datatables()
 	{
 		$this->_get_datatables_query();
-		if($_POST['length'] != -1)
+		if((int)$_POST['length'] !== -1)
 		$this->db->limit($_POST['length'], $_POST['start']);
 		$query = $this->db->get();
 		return $query->result();

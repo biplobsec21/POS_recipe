@@ -348,11 +348,14 @@
           ]
         },
         /* FOR EXPORT BUTTONS END */
-        "pageLength": 2000,
+        "pageLength": 50, // OPTIMIZATION: Reduced from 2000 to 50 for faster initial load (100k+ records)
         "processing": true, //Feature control the processing indicator.
         "serverSide": true, //Feature control DataTables' server-side processing mode.
         "order": [], //Initial no order.
         "responsive": true,
+        "deferRender": true, // OPTIMIZATION: Defer rendering of table body elements until needed
+        "scrollY": 400, // OPTIMIZATION: Enable scrolling instead of pagination when possible
+        "scroller": true, // OPTIMIZATION: Virtual scrolling for large datasets
         language: {
           processing: '<div class="text-primary bg-primary" style="position: relative;z-index:100;overflow: visible;">Processing...</div>'
         },
@@ -368,6 +371,8 @@
             user_created_by: $("#user_created_by").val(),
             customer_id: $("#search_customer_id").val(),
           },
+          "cache": true, // OPTIMIZATION: Cache results
+          "timeout": 30000, // OPTIMIZATION: Set timeout for large datasets
           complete: function(data) {
             $('.column_checkbox').iCheck({
               checkboxClass: 'icheckbox_square-orange',
@@ -442,9 +447,14 @@
       load_datatable();
     });
 
+    // OPTIMIZATION: Debounce filter changes to prevent excessive queries
+    var filterTimeout;
     $("#sales_from_date,#sales_to_date,#user_created_by,#search_customer_id").on("change", function() {
-      $('#example2').DataTable().destroy();
-      load_datatable();
+      clearTimeout(filterTimeout);
+      filterTimeout = setTimeout(function() {
+        $('#example2').DataTable().destroy();
+        load_datatable();
+      }, 500); // Wait 500ms after user stops changing filters
     });
   </script>
   <script src="<?php echo $theme_link; ?>js/sales.js"></script>

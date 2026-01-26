@@ -36,7 +36,7 @@ class Customer_ledger_model extends CI_Model
         $running_balance = $opening_balance;
 
         // Add opening balance entry only if it's not zero
-        if ($opening_balance != 0) {
+        if ((float)$opening_balance !== 0.0) {
             $ledger_data[] = (object)[
                 'date' => $db_start_date . ' 00:00:00',
                 'reference_no' => '',
@@ -102,7 +102,7 @@ class Customer_ledger_model extends CI_Model
             $timeB = strtotime($b->date);
 
             // If dates are equal, sort by type to ensure consistent order
-            if ($timeA == $timeB) {
+            if ($timeA === $timeB) {
                 $typeOrder = [
                     'Opening Balance' => 0,
                     'Sell' => 1,

@@ -82,7 +82,7 @@ class Recipe_model extends CI_Model
                 }
 
                 // Close the group after the last item
-                if (count($this->column_search) - 1 == $i) {
+                if ((int)(count($this->column_search) - 1) === (int)$i) {
                     $this->db->group_end();
                 }
                 $i++;
@@ -93,7 +93,7 @@ class Recipe_model extends CI_Model
         if (isset($_POST['order']) && count($_POST['order'])) {
             $order_col_index = intval($_POST['order'][0]['column']);
             $order_dir = $_POST['order'][0]['dir'];
-            if (isset($this->column_order[$order_col_index]) && $this->column_order[$order_col_index] != null) {
+            if (isset($this->column_order[$order_col_index]) && $this->column_order[$order_col_index] !== null) {
                 $this->db->order_by($this->column_order[$order_col_index], $order_dir);
             }
         } elseif ($this->order) {
@@ -109,7 +109,7 @@ class Recipe_model extends CI_Model
     {
         $this->_get_datatables_query();
 
-        if (isset($_POST['length']) && $_POST['length'] != -1) {
+        if (isset($_POST['length']) && (int)$_POST['length'] !== -1) {
             $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
             $length = intval($_POST['length']);
             $this->db->limit($length, $start);

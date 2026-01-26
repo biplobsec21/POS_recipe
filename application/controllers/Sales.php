@@ -40,7 +40,7 @@ class Sales extends MY_Controller
 		$this->form_validation->set_rules('sales_date', 'Sales Date', 'trim|required');
 		$this->form_validation->set_rules('customer_id', 'Customer Name', 'trim|required');
 
-		if ($this->form_validation->run() == TRUE) {
+		if ($this->form_validation->run() === TRUE) {
 			$result = $this->sales->verify_save_and_update();
 			echo $result;
 		} else {
@@ -63,6 +63,13 @@ class Sales extends MY_Controller
 	{
 		$list = $this->sales->get_datatables();
 
+		// OPTIMIZATION: Batch fetch items for all displayed sales records
+		$sales_ids = array();
+		foreach ($list as $sales) {
+			$sales_ids[] = $sales->id;
+		}
+		$items_map = $this->sales->get_sales_items_batch($sales_ids);
+
 		$data = array();
 		$no = $_POST['start'];
 		foreach ($list as $sales) {
@@ -76,24 +83,25 @@ class Sales extends MY_Controller
 
 			$row[] = $sales->sales_code . $info;
 			$row[] = $sales->sales_status;
-			$row[] = $sales->items; //'reference';//$sales->reference_no;
-			$row[] = $sales->customer_name . $sales->address;
+			// OPTIMIZATION: Use pre-fetched items from batch query
+			$row[] = isset($items_map[$sales->id]) ? $items_map[$sales->id] : 'No Items';
+			$row[] = $sales->customer_name . (isset($sales->address) ? $sales->address : '');
 			//$row[] = $sales->warehouse_name;
 			$row[] = app_number_format($sales->grand_total);
 			$row[] = app_number_format($sales->paid_amount);
 			$row[] = app_number_format($sales->sales_due);
 			$str = '';
-			if ($sales->payment_status == 'Unpaid')
+			if ($sales->payment_status === 'Unpaid')
 				$str = "<span class='label label-danger' style='cursor:pointer'>Unpaid </span>";
-			if ($sales->payment_status == 'Partial')
+			elseif ($sales->payment_status === 'Partial')
 				$str = "<span class='label label-warning' style='cursor:pointer'> Partial </span>";
-			if ($sales->payment_status == 'Paid')
+			elseif ($sales->payment_status === 'Paid')
 				$str = "<span class='label label-success' style='cursor:pointer'> Paid </span>";
 
 			$row[] = $str;
 			$row[] = ucfirst($sales->created_by);
 
-			if ($sales->pos == 1):
+			if ($sales->pos === 1):
 				$str1 = 'pos/edit/';
 			else:
 				$str1 = 'sales/update/';

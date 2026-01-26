@@ -80,8 +80,8 @@ class Customers extends MY_Controller
 		foreach ($list as $customers) {
 			$no++;
 			$row = array();
-			$disable = ($customers->id == 1) ? 'disabled' : '';
-			if ($customers->id == 1) {
+			$disable = ((int)$customers->id === 1) ? 'disabled' : '';
+			if ((int)$customers->id === 1) {
 				$row[] = '<span class="text-blue">NA</span>';
 			} else {
 				$row[] = '<input type="checkbox" name="checkbox[]" ' . $disable . ' value=' . $customers->id . ' class="checkbox column_checkbox" >';
@@ -100,7 +100,7 @@ class Customers extends MY_Controller
 			$row[] = ($customers->sales_return_due == null) ? $customers->opening_balance : app_number_format($customers->sales_return_due);
 			$row[] = $this->customers->get_total_due_amount($customers->id);
 
-			if ($customers->status == 1) {
+			if ((int)$customers->status === 1) {
 				$str = "<span onclick='update_status(" . $customers->id . ",0)' id='span_" . $customers->id . "'  class='label label-success' style='cursor:pointer'>Active </span>";
 			} else {
 				$str = "<span onclick='update_status(" . $customers->id . ",1)' id='span_" . $customers->id . "'  class='label label-danger' style='cursor:pointer'> Inactive </span>";

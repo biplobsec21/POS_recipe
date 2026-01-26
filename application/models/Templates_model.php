@@ -30,7 +30,7 @@ class Templates_model extends CI_Model {
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if(count($this->column_search) - 1 == $i) //last loop
+				if(count($this->column_search) - 1 === $i) //last loop
 					$this->db->group_end(); //close bracket
 			}
 			$i++;
@@ -50,7 +50,7 @@ class Templates_model extends CI_Model {
 	function get_datatables()
 	{
 		$this->_get_datatables_query();
-		if($_POST['length'] != -1)
+		if($_POST['length'] !== -1)
 		$this->db->limit($_POST['length'], $_POST['start']);
 		$query = $this->db->get();
 		return $query->result();
@@ -98,7 +98,7 @@ class Templates_model extends CI_Model {
 	public function get_details($id,$data){
 		//Validate This category already exist or not
 		$query=$this->db->query("select * from db_smstemplates where upper(id)=upper('$id')");
-		if($query->num_rows()==0){
+		if($query->num_rows() === 0){
 			show_404();exit;
 		}
 		else{

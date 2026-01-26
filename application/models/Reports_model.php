@@ -13,11 +13,11 @@ class Reports_model extends CI_Model
 
 		$this->db->select("a.id,a.sales_code,a.sales_date,b.customer_name,b.customer_code,a.grand_total,a.paid_amount");
 
-		if ($customer_id != '') {
+		if ($customer_id !== '') {
 
 			$this->db->where("a.customer_id=$customer_id");
 		}
-		if ($view_all == "no") {
+		if ($view_all === "no") {
 			$this->db->where("(a.sales_date>='$from_date' and a.sales_date<='$to_date')");
 		}
 		$this->db->where("b.`id`= a.`customer_id`");
@@ -25,11 +25,11 @@ class Reports_model extends CI_Model
 		$this->db->where("a.`sales_status`= 'Final'");
 		$this->db->from("db_customers as b");
 
-		if ($payment_status == 'Paid') {
+		if ($payment_status === 'Paid') {
 			$this->db->where("a.grand_total=a.paid_amount");
-		} else if ($payment_status == 'Unpaid') {
+		} else if ($payment_status === 'Unpaid') {
 			$this->db->where("a.paid_amount=0");
-		} else if ($payment_status == 'Partial') {
+		} else if ($payment_status === 'Partial') {
 			$this->db->where("(a.grand_total!=a.paid_amount and a.paid_amount>0)");
 		}
 
@@ -43,7 +43,7 @@ class Reports_model extends CI_Model
 			$tot_due_amount = 0;
 			foreach ($q1->result() as $res1) {
 
-				$date_difference = ($res1->paid_amount == 0 || ($res1->grand_total != $res1->paid_amount && $res1->paid_amount > 0)) ? date_difference($res1->sales_date, date("Y-m-d")) : 0;
+				$date_difference = ((float)$res1->paid_amount === 0.0 || ((float)$res1->grand_total !== (float)$res1->paid_amount && (float)$res1->paid_amount > 0)) ? date_difference($res1->sales_date, date("Y-m-d")) : 0;
 
 				echo "<tr>";
 				echo "<td>" . ++$i . "</td>";
@@ -149,10 +149,10 @@ class Reports_model extends CI_Model
 
 		$this->db->select("a.id,a.purchase_code,a.purchase_date,b.supplier_name,b.supplier_code,a.grand_total,a.paid_amount");
 
-		if ($supplier_id != '') {
+		if ($supplier_id !== '') {
 			$this->db->where("a.supplier_id=$supplier_id");
 		}
-		if ($view_all == "no") {
+		if ($view_all === "no") {
 			$this->db->where("(a.purchase_date>='$from_date' and a.purchase_date<='$to_date')");
 		}
 		$this->db->where("b.`id`= a.`supplier_id`");
@@ -160,11 +160,11 @@ class Reports_model extends CI_Model
 		$this->db->where("a.`purchase_status`= 'Received'");
 		$this->db->from("db_suppliers as b");
 
-		if ($payment_status == 'Paid') {
+		if ($payment_status === 'Paid') {
 			$this->db->where("a.grand_total=a.paid_amount");
-		} else if ($payment_status == 'Unpaid') {
+		} else if ($payment_status === 'Unpaid') {
 			$this->db->where("a.paid_amount=0");
-		} else if ($payment_status == 'Partial') {
+		} else if ($payment_status === 'Partial') {
 			$this->db->where("(a.grand_total!=a.paid_amount and a.paid_amount>0)");
 		}
 
@@ -177,7 +177,7 @@ class Reports_model extends CI_Model
 			$tot_paid_amount = 0;
 			$tot_due_amount = 0;
 			foreach ($q1->result() as $res1) {
-				$date_difference = ($res1->paid_amount == 0 || ($res1->grand_total != $res1->paid_amount && $res1->paid_amount > 0)) ? date_difference($res1->purchase_date, date("Y-m-d")) : 0;
+				$date_difference = ((float)$res1->paid_amount === 0.0 || ((float)$res1->grand_total !== (float)$res1->paid_amount && (float)$res1->paid_amount > 0)) ? date_difference($res1->purchase_date, date("Y-m-d")) : 0;
 
 				echo "<tr>";
 				echo "<td>" . ++$i . "</td>";
@@ -282,10 +282,10 @@ class Reports_model extends CI_Model
 
 		$this->db->select("a.*,b.category_name");
 
-		if ($category_id != '') {
+		if ($category_id !== '') {
 			$this->db->where("a.category_id=$category_id");
 		}
-		if ($view_all == "no") {
+		if ($view_all === "no") {
 			$this->db->where("(a.expense_date>='$from_date' and a.expense_date<='$to_date')");
 		}
 		$this->db->where("b.`id`= a.`category_id`");
@@ -370,7 +370,7 @@ class Reports_model extends CI_Model
 			$tot_stock = 0;
 
 			foreach ($q1->result() as $res1) {
-				$tax_type = ($res1->tax_type == 'Inclusive') ? 'Inc.' : 'Exc.';
+				$tax_type = ($res1->tax_type === 'Inclusive') ? 'Inc.' : 'Exc.';
 				$stock_value = $res1->purchase_price * $res1->stock;
 				$str .= "<tr>";
 				$str .= "<td>" . ++$i . "</td>";

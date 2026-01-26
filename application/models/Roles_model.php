@@ -30,7 +30,7 @@ class Roles_model extends CI_Model {
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if(count($this->column_search) - 1 == $i) //last loop
+				if(count($this->column_search) - 1 === $i) //last loop
 					$this->db->group_end(); //close bracket
 			}
 			$i++;
@@ -50,7 +50,7 @@ class Roles_model extends CI_Model {
 	function get_datatables()
 	{
 		$this->_get_datatables_query();
-		if($_POST['length'] != -1)
+		if($_POST['length'] !== -1)
 		$this->db->limit($_POST['length'], $_POST['start']);
 		$query = $this->db->get();
 		return $query->result();
@@ -97,7 +97,7 @@ class Roles_model extends CI_Model {
 	public function get_details($id,$data){
 		//Validate This role_name already exist or not
 		$query=$this->db->query("select * from db_roles where upper(id)=upper('$id')");
-		if($query->num_rows()==0){
+		if($query->num_rows() === 0){
 			show_404();exit;
 		}
 		else{
@@ -130,7 +130,7 @@ class Roles_model extends CI_Model {
 		}
 	}
 	public function update_status($id,$status){
-		if($id==1){
+		if($id === 1){
 				echo "Restricted! Can't Update this User Status!";exit();
 			}
         $query1="update db_roles set status='$status' where id=$id";
@@ -142,7 +142,7 @@ class Roles_model extends CI_Model {
         }
 	}
 	public function delete_roles_from_table($ids){
-			if($ids==1){
+			if($ids === 1){
 				echo "Restricted! Can't Delete this User!";exit();
 			}
 			$query1=$this->db->query("delete from db_roles where id in($ids)");

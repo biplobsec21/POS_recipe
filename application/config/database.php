@@ -80,10 +80,10 @@ $db['default'] = array(
 	// 'username' => 'adoralab_21eb_db',
 	// 'password' => 'gjoss7SP5d{X_[mL',
 	'hostname' => '127.0.0.1:3306',   // 👈 IMPORTANT
-    'username' => 'root',             // or the new user you create
-    'password' => 'root',             // or new password
+	'username' => 'root',             // or the new user you create
+	'password' => 'root',             // or new password
 
-    'database' => 'c_attendance',
+	'database' => 'adoralab_21eb_root',
 
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',

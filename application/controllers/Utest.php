@@ -1,34 +1,37 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+defined('BASEPATH') or exit('No direct script access allowed');
 
-class Utest extends CI_Controller {
+class Utest extends CI_Controller
+{
 
-	public function __construct(){
-			parent::__construct();
-			/*$this->load_global();
+	public function __construct()
+	{
+		parent::__construct();
+		/*$this->load_global();
 
 			$this->load->model('state_model','state');*/
-		}
+	}
 
-	public function user_test($id){
+	public function user_test($id)
+	{
 
-		$id=$this->security->xss_clean(html_escape($id));
-				
-		$query=$this->db->query("select a.id,a.username,a.role_id,b.role_name from db_users a, db_roles b where b.id=a.role_id and  a.id='$id'");
+		$id = $this->security->xss_clean(html_escape($id));
 
-		if($query->num_rows()==1){
+		$query = $this->db->query("select a.id,a.username,a.role_id,b.role_name from db_users a, db_roles b where b.id=a.role_id and  a.id='$id'");
 
-			$logdata = array('inv_username'  => $query->row()->username,
-				        	 'inv_userid'  => $query->row()->id,
-				        	 'logged_in' => TRUE,
-				        	 'role_id' => $query->row()->role_id,
-				        	 'role_name' => trim($query->row()->role_name),
-				        	);
+		if ($query->num_rows() === 1) {
+
+			$logdata = array(
+				'inv_username'  => $query->row()->username,
+				'inv_userid'  => $query->row()->id,
+				'logged_in' => TRUE,
+				'role_id' => $query->row()->role_id,
+				'role_name' => trim($query->row()->role_name),
+			);
 			$this->session->set_userdata($logdata);
 			return true;
-		}
-		else{
+		} else {
 			return false;
-		}		
+		}
 	}
 }

@@ -17,32 +17,20 @@ class Sales_model extends CI_Model
 	}
 	private function _get_datatables_query()
 	{
-		// Select columns from db_sales
-		$this->db->select($this->column_order);
+		// OPTIMIZATION: Use simplified query WITHOUT item joins to avoid GROUP_CONCAT overhead
+		// Items will be fetched separately in controller if needed
+
+		$this->db->select('SQL_CALC_FOUND_ROWS a.id, a.return_bit, a.sales_date, a.sales_code, a.reference_no, a.grand_total, a.payment_status, a.created_by, b.customer_name, a.paid_amount, a.sales_status, a.pos', FALSE);
+		$this->db->select("coalesce(a.grand_total,0)-coalesce(a.paid_amount,0) as sales_due");
 		$this->db->from($this->table);
 
-		// Select additional fields
-		$this->db->select("coalesce(a.grand_total,0)-coalesce(a.paid_amount,0) as sales_due");
-
-		// Join with db_customers
+		// Join with db_customers ONLY - eliminates Cartesian product
 		$this->db->join('db_customers as b', 'b.id = a.customer_id', 'left');
-
-		// Join with db_salesitems
-		$this->db->join('db_salesitems as si', 'si.sales_id = a.id', 'left');
-
-		// Join with db_items to get item names
-		$this->db->join('db_items as i', 'i.id = si.item_id', 'left');
-
-		// Concatenate item names
-		// $this->db->select("GROUP_CONCAT(i.item_name SEPARATOR ', ') as items");
-
-		$this->db->select("GROUP_CONCAT(CONCAT(CAST(si.sales_qty AS UNSIGNED), ' ', i.item_name) SEPARATOR ', ') as items");
-
 
 		// Apply filters based on posted data
 		$customer_id = $this->input->post('customer_id');
 		if (!empty($customer_id)) {
-			$this->db->where('a.customer_id', $customer_id);
+			$this->db->where('a.customer_id', (int)$customer_id);
 		}
 
 		$sales_from_date = $this->input->post('sales_from_date');
@@ -52,23 +40,27 @@ class Sales_model extends CI_Model
 		$users = $this->input->post('user_created_by');
 
 		if (!permissions('view_all_users_sales_invoices')) {
-			$this->db->where("upper(a.created_by)", strtoupper($this->session->userdata('inv_username')));
+			// OPTIMIZATION: Remove UPPER() function to allow index usage
+			$this->db->where('a.created_by', $this->session->userdata('inv_username'));
 		}
 
 		if ($users && !empty($users)) {
-			$this->db->where("upper(a.created_by)", strtoupper($users));
-		}
-		if ($sales_from_date != '1970-01-01') {
-			$this->db->where("a.sales_date >=", $sales_from_date);
-		}
-		if ($sales_to_date != '1970-01-01') {
-			$this->db->where("a.sales_date <=", $sales_to_date);
+			$this->db->where('a.created_by', $users);
 		}
 
-		// Apply search filters
+		if ($sales_from_date !== '1970-01-01') {
+			$this->db->where('a.sales_date >=', $sales_from_date);
+		}
+		if ($sales_to_date !== '1970-01-01') {
+			$this->db->where('a.sales_date <=', $sales_to_date);
+		}
+
+		// Apply search filters with optimized column list (exclude expensive GROUP_CONCAT columns)
 		$i = 0;
-		foreach ($this->column_search as $item) {
-			if ($_POST['search']['value']) {
+		$optimized_search_columns = array('a.id', 'a.sales_date', 'a.sales_code', 'a.reference_no', 'a.grand_total', 'a.payment_status', 'a.created_by', 'b.customer_name', 'a.paid_amount', 'a.sales_status');
+
+		foreach ($optimized_search_columns as $item) {
+			if (isset($_POST['search']['value']) && !empty($_POST['search']['value'])) {
 				if ($i === 0) {
 					$this->db->group_start();
 					$this->db->like($item, $_POST['search']['value']);
@@ -76,23 +68,22 @@ class Sales_model extends CI_Model
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if (count($this->column_search) - 1 == $i) {
+				if ((int)(count($optimized_search_columns) - 1) === (int)$i) {
 					$this->db->group_end();
 				}
 			}
 			$i++;
 		}
 
-		// Order the results
+		// Order the results - apply BEFORE LIMIT for better performance
 		if (isset($_POST['order'])) {
-			$this->db->order_by($this->column_order[$_POST['order']['0']['column']], $_POST['order']['0']['dir']);
+			$order_column = $this->column_order[$_POST['order']['0']['column']] ?? 'a.id';
+			$order_dir = strtoupper($_POST['order']['0']['dir']) === 'ASC' ? 'ASC' : 'DESC';
+			$this->db->order_by($order_column, $order_dir);
 		} else if (isset($this->order)) {
 			$order = $this->order;
 			$this->db->order_by(key($order), $order[key($order)]);
 		}
-
-		// Group by sales_id to aggregate items properly
-		$this->db->group_by('a.id');
 	}
 	// 	private function _get_datatables_query()
 	// 	{
@@ -176,25 +167,66 @@ class Sales_model extends CI_Model
 	function get_datatables()
 	{
 		$this->_get_datatables_query();
-		if ($_POST['length'] != -1)
-			$this->db->limit($_POST['length'], $_POST['start']);
+		if (isset($_POST['length']) && (int)$_POST['length'] !== -1) {
+			$this->db->limit((int)$_POST['length'], (int)$_POST['start']);
+		}
 		$query = $this->db->get();
 		return $query->result();
 	}
 
 	function count_filtered()
 	{
-		$this->_get_datatables_query();
-		$query = $this->db->get();
-		return $query->num_rows();
+		// OPTIMIZATION: Use FOUND_ROWS() from previous query with SQL_CALC_FOUND_ROWS
+		$query = $this->db->query("SELECT FOUND_ROWS() as count");
+		return (int)$query->row()->count;
 	}
 
 	public function count_all()
 	{
-		$this->db->from($this->table);
-		return $this->db->count_all_results();
+		// OPTIMIZATION: Use direct COUNT query instead of count_all_results()
+		$query = $this->db->select('COUNT(*) as total')->from($this->table)->get();
+		return (int)$query->row()->total;
 	}
 	//Datatable end
+
+	// OPTIMIZATION: New method to fetch items for a single sales record
+	public function get_sales_items_string($sales_id)
+	{
+		$query = $this->db->query("
+			SELECT GROUP_CONCAT(CONCAT(CAST(si.sales_qty AS UNSIGNED), ' ', i.item_name) SEPARATOR ', ') as items
+			FROM db_salesitems si
+			JOIN db_items i ON i.id = si.item_id
+			WHERE si.sales_id = " . (int)$sales_id . "
+			LIMIT 1
+		");
+
+		$result = $query->row();
+		return $result->items ?? 'No Items';
+	}
+
+	// OPTIMIZATION: Batch fetch items for multiple sales IDs
+	public function get_sales_items_batch($sales_ids)
+	{
+		if (empty($sales_ids)) {
+			return array();
+		}
+
+		$ids_string = implode(',', array_map('intval', $sales_ids));
+		$query = $this->db->query("
+			SELECT si.sales_id, GROUP_CONCAT(CONCAT(CAST(si.sales_qty AS UNSIGNED), ' ', i.item_name) SEPARATOR ', ') as items
+			FROM db_salesitems si
+			JOIN db_items i ON i.id = si.item_id
+			WHERE si.sales_id IN ($ids_string)
+			GROUP BY si.sales_id
+		");
+
+		$items_array = array();
+		foreach ($query->result() as $row) {
+			$items_array[$row->sales_id] = $row->items;
+		}
+
+		return $items_array;
+	}
 
 	public function xss_html_filter($input)
 	{
@@ -211,26 +243,26 @@ class Sales_model extends CI_Model
 		$this->db->trans_begin();
 		$sales_date = date('Y-m-d', strtotime($sales_date));
 
-		if ($other_charges_input == '' || $other_charges_input == 0) {
+		if ($other_charges_input === '' || (float)$other_charges_input === 0.0) {
 			$other_charges_input = null;
 		}
-		if ($other_charges_tax_id == '' || $other_charges_tax_id == 0) {
+		if ($other_charges_tax_id === '' || (int)$other_charges_tax_id === 0) {
 			$other_charges_tax_id = null;
 		}
-		if ($other_charges_amt == '' || $other_charges_amt == 0) {
+		if ($other_charges_amt === '' || (float)$other_charges_amt === 0.0) {
 			$other_charges_amt = null;
 		}
-		if ($discount_to_all_input == '' || $discount_to_all_input == 0) {
+		if ($discount_to_all_input === '' || (float)$discount_to_all_input === 0.0) {
 			$discount_to_all_input = null;
 		}
-		if ($tot_discount_to_all_amt == '' || $tot_discount_to_all_amt == 0) {
+		if ($tot_discount_to_all_amt === '' || (float)$tot_discount_to_all_amt === 0.0) {
 			$tot_discount_to_all_amt = null;
 		}
-		if ($tot_round_off_amt == '' || $tot_round_off_amt == 0) {
+		if ($tot_round_off_amt === '' || (float)$tot_round_off_amt === 0.0) {
 			$tot_round_off_amt = null;
 		}
 
-		if ($command == 'save') { //Create sales code unique if first time entry
+		if ($command === 'save') { //Create sales code unique if first time entry
 
 			$qs5 = "select sales_init from db_company";
 			$q5 = $this->db->query($qs5);
@@ -272,7 +304,7 @@ class Sales_model extends CI_Model
 
 			$q1 = $this->db->insert('db_sales', $sales_entry);
 			$sales_id = $this->db->insert_id();
-		} else if ($command == 'update') {
+		} else if ($command === 'update') {
 			$sales_entry = array(
 				'reference_no' 				=> $reference_no,
 				'sales_date' 			=> $sales_date,
@@ -345,24 +377,24 @@ class Sales_model extends CI_Model
 
 
 				$discount_amt_per_unit = $discount_amt / $sales_qty;
-				if ($tax_type == 'Exclusive') {
+				if ($tax_type === 'Exclusive') {
 					$single_unit_total_cost = $price_per_unit + ($unit_tax * $price_per_unit / 100);
 				} else { //Inclusive
 					$single_unit_total_cost = $price_per_unit;
 				}
 				$single_unit_total_cost -= $discount_amt_per_unit;
 
-				if ($tax_id == '' || $tax_id == 0) {
+				if ($tax_id === '' || (int)$tax_id === 0) {
 					$tax_id = null;
 				}
-				if ($tax_amt == '' || $tax_amt == 0) {
+				if ($tax_amt === '' || (float)$tax_amt === 0.0) {
 					$tax_amt = null;
 				}
-				if ($discount_input == '' || $discount_input == 0) {
+				if ($discount_input === '' || (float)$discount_input === 0.0) {
 					$discount_input = null;
 				}
 				//if($unit_total_cost=='' || $unit_total_cost==0){$unit_total_cost=null;}
-				if ($total_cost == '' || $total_cost == 0) {
+				if ($total_cost === '' || (float)$total_cost === 0.0) {
 					$total_cost = null;
 				}
 
@@ -402,10 +434,10 @@ class Sales_model extends CI_Model
 			}
 		} //for end
 
-		if ($amount == '' || $amount == 0) {
+		if ($amount === '' || (float)$amount === 0.0) {
 			$amount = null;
 		}
-		if ($amount > 0 && !empty($payment_type)) {
+		if ((float)$amount > 0 && !empty($payment_type)) {
 			$salespayments_entry = array(
 				'sales_id' 		=> $sales_id,
 				'payment_date'		=> $sales_date, //Current Payment with sales entry
@@ -421,7 +453,7 @@ class Sales_model extends CI_Model
 			);
 
 			$q3 = $this->db->insert('db_salespayments', $salespayments_entry);
-			if ($q3 != 1) {
+			if (!$q3) {
 				return "failed";
 			}
 			/*$salespayment_id=$this->db->insert_id();
@@ -448,14 +480,15 @@ class Sales_model extends CI_Model
 
 
 		$q10 = $this->update_sales_payment_status($sales_id, $customer_id);
-		if ($q10 != 1) {
+		if (!$q10) {
 			return "failed";
 		}
 
 
+
 		$sms_info = '';
-		if (isset($send_sms) && $customer_id != 1) {
-			if (send_sms_using_template($sales_id, 1) == true) {
+		if (isset($send_sms) && (int)$customer_id !== 1) {
+			if (send_sms_using_template($sales_id, 1) === true) {
 				$sms_info = 'SMS Has been Sent!';
 			} else {
 				$sms_info = 'Failed to Send SMS';
@@ -481,12 +514,16 @@ class Sales_model extends CI_Model
 
 		//$pending_amt=$payble_total-$sum_of_payments;
 
-		$payment_status = '';
-		if ($payble_total == $sum_of_payments) {
+		// Type cast to float for strict PHP 8.2 comparison
+		$payble_total = (float)$payble_total;
+		$sum_of_payments = (float)$sum_of_payments;
+
+		// Determine payment status with strict comparison
+		if ($payble_total === $sum_of_payments && $payble_total > 0) {
 			$payment_status = "Paid";
-		} else if ($sum_of_payments != 0 && ($sum_of_payments < $payble_total)) {
+		} elseif ($sum_of_payments > 0 && $sum_of_payments < $payble_total) {
 			$payment_status = "Partial";
-		} else if ($sum_of_payments == 0) {
+		} else {
 			$payment_status = "Unpaid";
 		}
 
@@ -529,7 +566,7 @@ class Sales_model extends CI_Model
 	{
 		//Validate This sales already exist or not
 		$query = $this->db->query("select * from db_sales where upper(id)=upper('$id')");
-		if ($query->num_rows() == 0) {
+		if ($query->num_rows() === 0) {
 			show_404();
 			exit;
 		} else {
@@ -709,7 +746,7 @@ class Sales_model extends CI_Model
 		$info['item_discount_input'] = $q1->row()->discount;
 		$info['purchase_price'] = $q1->row()->price;
 
-		$info['item_tax_amt'] = ($q1->row()->tax_type == 'Inclusive') ? calculate_inclusive($q1->row()->sales_price, $q3->tax) : calculate_exclusive($q1->row()->sales_price, $q3->tax);
+		$info['item_tax_amt'] = ($q1->row()->tax_type === 'Inclusive') ? calculate_inclusive($q1->row()->sales_price, $q3->tax) : calculate_exclusive($q1->row()->sales_price, $q3->tax);
 
 		$this->return_row_with_data($rowcount, $info);
 	}
@@ -831,7 +868,8 @@ class Sales_model extends CI_Model
 
 		$q1 = $this->db->query("delete from db_salespayments where id='$payment_id'");
 		$q2 = $this->update_sales_payment_status($sales_id, $customer_id);
-		if ($q1 != 1 || $q2 != 1) {
+
+		if (!$q1 || !$q2) {
 			$this->db->trans_rollback();
 			return "failed";
 		} else {
@@ -1001,10 +1039,10 @@ class Sales_model extends CI_Model
 	{
 		extract($this->xss_html_filter(array_merge($this->data, $_POST, $_GET)));
 		//print_r($this->xss_html_filter(array_merge($this->data,$_POST,$_GET)));exit();
-		if ($amount == '' || $amount == 0) {
+		if ($amount === '' || (float)$amount === 0.0) {
 			$amount = null;
 		}
-		if ($amount > 0 && !empty($payment_type)) {
+		if ((float)$amount > 0 && !empty($payment_type)) {
 			$salespayments_entry = array(
 				'sales_id' 		=> $sales_id,
 				'payment_date'		=> date("Y-m-d", strtotime($payment_date)), //Current Payment with sales entry
@@ -1026,7 +1064,7 @@ class Sales_model extends CI_Model
 
 		$customer_id = $this->db->query("select customer_id from db_sales where id=$sales_id")->row()->customer_id;
 		$q10 = $this->update_sales_payment_status($sales_id, $customer_id);
-		if ($q10 != 1) {
+		if (!$q10) {
 			return "failed";
 		}
 		return "success";
