@@ -63,3 +63,21 @@ LEFT JOIN `db_items` as `i` ON `i`.`id` = `recipes`.`output_product_id`
 ORDER BY `id` DESC
  LIMIT 10
 ERROR - 2026-01-27 14:12:02 --> Severity: error --> Exception: Call to a member function result() on bool /Users/hello/Herd/21eb.ramksofttech.com/application/models/Recipe_model.php 119
+ERROR - 2026-01-27 13:47:24 --> 404 Page Not Found: Faviconico/index
+ERROR - 2026-01-27 13:47:29 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-01-27 13:47:30 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-01-27 13:47:30 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-01-27 13:47:30 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-01-27 13:47:31 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> mysqli::real_connect(): (HY000/1049): Unknown database 'c_attendances' /Users/hello/Herd/21eb.ramksofttech.com/system/database/drivers/mysqli/mysqli_driver.php 211
+ERROR - 2026-01-27 13:47:42 --> Unable to connect to the database
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> mysqli::real_connect(): (HY000/1049): Unknown database 'c_attendances' /Users/hello/Herd/21eb.ramksofttech.com/system/database/drivers/mysqli/mysqli_driver.php 211
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> session_start(): Failed to initialize storage module: user (path: ) /Users/hello/Herd/21eb.ramksofttech.com/system/libraries/Session/Session.php 137
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> mysqli::real_connect(): (HY000/1049): Unknown database 'c_attendances' /Users/hello/Herd/21eb.ramksofttech.com/system/database/drivers/mysqli/mysqli_driver.php 211
+ERROR - 2026-01-27 13:47:42 --> Unable to connect to the database
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> mysqli::real_connect(): (HY000/1049): Unknown database 'c_attendances' /Users/hello/Herd/21eb.ramksofttech.com/system/database/drivers/mysqli/mysqli_driver.php 211
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> session_start(): Failed to initialize storage module: user (path: ) /Users/hello/Herd/21eb.ramksofttech.com/system/libraries/Session/Session.php 137
+ERROR - 2026-01-27 13:47:42 --> Severity: Warning --> mysqli::real_connect(): (HY000/1049): Unknown database 'c_attendances' /Users/hello/Herd/21eb.ramksofttech.com/system/database/drivers/mysqli/mysqli_driver.php 211
+ERROR - 2026-01-27 13:47:42 --> Unable to connect to the database
+ERROR - 2026-01-27 13:47:42 --> Query error: Unknown database 'c_attendances' - Invalid query: SELECT a.currency_name,a.currency,a.currency_code,a.symbol,b.currency_placement FROM db_currency a,db_sitesettings b WHERE a.id=b.currency_id AND b.id=1
+ERROR - 2026-01-27 13:47:42 --> Severity: error --> Exception: Call to a member function row() on bool /Users/hello/Herd/21eb.ramksofttech.com/application/core/MY_Controller.php 22
