@@ -325,14 +325,14 @@ class Purchase_model extends CI_Model
 		$payble_total = $q9->row()->total;
 
 		//$pending_amt=$payble_total-$sum_of_payments;
+		$payment_status = "Unpaid"; // Default
+		$payble_total = (float)$payble_total;
+		$sum_of_payments = (float)$sum_of_payments;
 
-		$payment_status = '';
-		if ($payble_total === $sum_of_payments) {
+		if ($sum_of_payments >= $payble_total) {
 			$payment_status = "Paid";
-		} else if ($sum_of_payments !== 0 && ($sum_of_payments < $payble_total)) {
+		} elseif ($sum_of_payments > 0) {
 			$payment_status = "Partial";
-		} else if ($sum_of_payments === 0) {
-			$payment_status = "Unpaid";
 		}
 
 
