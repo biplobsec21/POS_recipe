@@ -335,6 +335,8 @@ class Purchase_model extends CI_Model
 			$payment_status = "Partial";
 		}
 
+		// --- this is for test
+
 
 		$q7 = $this->db->query("update db_purchase set 
 							payment_status='$payment_status',
