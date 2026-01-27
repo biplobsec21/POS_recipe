@@ -83,7 +83,7 @@ $db['default'] = array(
 	'username' => 'root',             // or the new user you create
 	'password' => 'root',             // or new password
 
-	'database' => 'adoralab_21eb_root',
+	'database' => 'c_attendance', //'adoralab_21eb_root',
 
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',

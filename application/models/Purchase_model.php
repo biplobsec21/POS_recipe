@@ -850,9 +850,22 @@ class Purchase_model extends CI_Model
 		$paid_amount = $res1->paid_amount;
 		$due_amount = $grand_total - $paid_amount;
 
-		$supplier_country = $this->db->query("select country from db_country where id=" . $res2->country_id)->row()->country;
-		$supplier_state = (!empty($supplier_state)) ? $this->db->query("select state from db_states where id=" . $res2->state_id)->row()->state : '';
+		$supplier_country = '';
+		if (!empty($res2->country_id)) {
+			$country_query = $this->db->query("SELECT country FROM db_country WHERE id = ?", [$res2->country_id]);
+			if ($country_query->num_rows() > 0) {
+				$supplier_country = $country_query->row()->country;
+			}
+		}
 
+		// Line 880 - Get state safely
+		$supplier_state = '';
+		if (!empty($supplier_state_id)) { // Note: You're using $supplier_state variable name twice
+			$state_query = $this->db->query("SELECT state FROM db_states WHERE id = ?", [$res2->state_id]);
+			if ($state_query->num_rows() > 0) {
+				$supplier_state = $state_query->row()->state;
+			}
+		}
 
 	?>
 		<div class="modal fade" id="view_payments_modal">
