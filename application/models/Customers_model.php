@@ -547,7 +547,7 @@ class Customers_model extends CI_Model
 
 						$q3 = $this->db->insert('db_salespayments', $salespayments_entry);
 						$q10 = $this->sales_model->update_sales_payment_status($sales_id, $customer_id);
-						if ($q10 !== 1) {
+						if (!$q10) {
 							return "failed";
 						}
 					}
@@ -775,7 +775,7 @@ class Customers_model extends CI_Model
 
 						$q3 = $this->db->insert('db_salespaymentsreturn', $salespayments_entry);
 						$q10 = $this->sales_return_model->update_sales_payment_status($return_id, $customer_id);
-						if ($q10 !== 1) {
+						if (!$q10) {
 							return "failed";
 						}
 					}
