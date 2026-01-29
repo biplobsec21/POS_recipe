@@ -176,6 +176,9 @@ class Pos_model extends CI_Model
 		//$tot_grand		=round($tot_amt);
 		$round_off = number_format($tot_grand - $tot_amt, 2, '.', '');
 
+		// Ensure other charges variable is defined
+		$other_charges = (isset($other_charges) && $other_charges !== '') ? $other_charges : 0;
+
 
 		//FIND CUSTOMER INFORMATION BY ITS ID
 		$q1 = $this->db->query("select customer_name,mobile from db_customers where id=$customer_id");
