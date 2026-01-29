@@ -438,7 +438,7 @@ class Suppliers_model extends CI_Model
 
         //Set purchase Payments
         if ($amount <= $supplier_purchase_due) {
-          $qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as purchase_due from db_purchase where grand_total !== paid_amount and supplier_id=" . $supplier_id);
+          $qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as purchase_due from db_purchase where grand_total <> paid_amount and supplier_id=" . $supplier_id);
           foreach ($qs4->result() as $res) {
             $grand_total = $res->grand_total;
             $paid_amount = $res->paid_amount;
@@ -688,7 +688,7 @@ class Suppliers_model extends CI_Model
 
         //Set purchase Payments
         if ($amount <= $supplier_purchase_return_due) {
-          $qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as purchase_due from db_purchasereturn where grand_total !== paid_amount and supplier_id=" . $supplier_id);
+          $qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as purchase_due from db_purchasereturn where grand_total <> paid_amount and supplier_id=" . $supplier_id);
           foreach ($qs4->result() as $res) {
             $grand_total = $res->grand_total;
             $paid_amount = $res->paid_amount;

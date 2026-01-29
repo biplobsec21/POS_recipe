@@ -6,8 +6,8 @@ class Customers_model extends CI_Model
 
 	//Datatable start
 	var $table = 'db_customers as a';
-	var $column_order = array('a.customer_code', 'a.id', 'a.customer_name', 'a.mobile', 'a.address', 'a.status', 'a.sales_due', 'a.sales_return_due'); //set column field database for datatable orderable
-	var $column_search = array('a.customer_code', 'a.id', 'a.customer_name', 'a.mobile', 'a.address', 'a.status', 'a.sales_due', 'a.sales_return_due'); //set column field database for datatable searchable 
+	var $column_order = array('a.customer_code', 'a.id', 'a.customer_name', 'a.mobile', 'a.address', 'a.opening_balance', 'a.status', 'a.sales_due', 'a.sales_return_due'); //set column field database for datatable orderable
+	var $column_search = array('a.customer_code', 'a.id', 'a.customer_name', 'a.mobile', 'a.address', 'a.opening_balance', 'a.status', 'a.sales_due', 'a.sales_return_due'); //set column field database for datatable searchable 
 	var $order = array('a.id' => 'desc'); // default order 
 
 	public function __construct()
@@ -506,7 +506,7 @@ class Customers_model extends CI_Model
 
 				//Set Sales Payments
 				if ($amount <= $customer_sales_due) {
-					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_sales where grand_total !== paid_amount and customer_id=" . $customer_id);
+					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_sales where grand_total <> paid_amount and customer_id=" . $customer_id);
 					foreach ($qs4->result() as $res) {
 						$grand_total = $res->grand_total;
 						$paid_amount = $res->paid_amount;
@@ -734,7 +734,7 @@ class Customers_model extends CI_Model
 			while ($amount > 0) {
 				//Set Sales Payments
 				if ($amount <= $customer_sales_return_due) {
-					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_salesreturn where grand_total !== paid_amount and customer_id=" . $customer_id);
+					$qs4 = $this->db->query("select id,grand_total,paid_amount,coalesce(grand_total-paid_amount,0) as sales_due from db_salesreturn where grand_total <> paid_amount and customer_id=" . $customer_id);
 					foreach ($qs4->result() as $res) {
 						$grand_total = $res->grand_total;
 						$paid_amount = $res->paid_amount;
