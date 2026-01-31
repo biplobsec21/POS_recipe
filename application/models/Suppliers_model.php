@@ -477,12 +477,14 @@ class Suppliers_model extends CI_Model
               $amount -= $purchase_due;
             }
 
-            $q3 = $this->db->insert('db_purchasepayments', $purchasepayments_entry);
+            if (isset($purchasepayments_entry)) {
+              $q3 = $this->db->insert('db_purchasepayments', $purchasepayments_entry);
+              unset($purchasepayments_entry);
 
-
-            $q10 = $this->purchase_model->update_purchase_payment_status($purchase_id, $supplier_id);
-            if (!$q10) {
-              return "failed";
+              $q10 = $this->purchase_model->update_purchase_payment_status($purchase_id, $supplier_id);
+              if (!$q10) {
+                return "failed";
+              }
             }
           }
         }

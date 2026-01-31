@@ -5,6 +5,9 @@
     RewriteEngine On
     RewriteBase /
 
+    # Redirect uppercase Theme/ requests to lowercase theme/ to avoid 404s on case-sensitive filesystems
+    RewriteRule ^Theme/(.*)$ theme/$1 [R=301,L]
+
     # Send all requests to index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

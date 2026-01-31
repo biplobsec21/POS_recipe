@@ -81,6 +81,7 @@ $lang['website']    =        'Website';
 $lang['city']    =        'City';
 $lang['postcode']    =        'Postcode';
 $lang['address']    =        'Address';
+$lang['company_address'] =        'Company Address';
 $lang['warehouse']    =        'Warehouse';
 $lang['units_list']    =        'Units List';
 /* 21-05-2019*/
@@ -97,6 +98,7 @@ $lang['password']    =        'Password';
 $lang['units']    =        'Units';
 $lang['units_list']    =        'Units List';
 $lang['unit_name']    =        'Unit Name';
+$lang['add_unit']    =        'Add Unit';
 $lang['description']    =        'Description';
 $lang['unit']    =        'Unit';
 $lang['view_units']    =        'View Units';

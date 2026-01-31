@@ -461,7 +461,7 @@ class Reports_model extends CI_Model
 
 				echo "</tr>";
 				$tot_total_cost += $res1->total_cost;
-				$tot_sales_qty += $res1->sales_qty;
+				$tot_sales_qty = (isset($tot_sales_qty) ? $tot_sales_qty : 0) + $res1->sales_qty;
 			}
 
 			echo "<tr>
@@ -527,7 +527,7 @@ class Reports_model extends CI_Model
 
 				echo "</tr>";
 				$tot_total_cost += $res1->total_cost;
-				$tot_purchase_qtyt += $res1->purchase_qty;
+				$tot_purchase_qtyt = (isset($tot_purchase_qtyt) ? $tot_purchase_qtyt : 0) + $res1->purchase_qty;
 			}
 
 			echo "<tr>

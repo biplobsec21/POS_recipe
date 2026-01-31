@@ -95,10 +95,13 @@ class Customers extends MY_Controller
 
 			// Use calculated sales due instead of stored value
 			$calculated_sales_due = $this->customers->get_calculated_sales_due($customers->id);
-			$row[] = (!empty($calculated_sales_due) && $calculated_sales_due != 0) ? app_number_format($calculated_sales_due) : (0);
+			$row[] = (!empty($calculated_sales_due) && $calculated_sales_due != 0) ? app_number_format($calculated_sales_due) : app_number_format(0);
 
-			$row[] = ($customers->sales_return_due == null) ? $customers->opening_balance : app_number_format($customers->sales_return_due);
-			$row[] = $this->customers->get_total_due_amount($customers->id);
+			// Show sales return due — default to 0 when null (previously showed opening balance accidentally)
+			$row[] = ($customers->sales_return_due === null) ? app_number_format(0) : app_number_format($customers->sales_return_due);
+
+			// Total Due (calculated sales due + opening balance due)
+			$row[] = app_number_format($this->customers->get_total_due_amount($customers->id));
 
 			if ((int)$customers->status === 1) {
 				$str = "<span onclick='update_status(" . $customers->id . ",0)' id='span_" . $customers->id . "'  class='label label-success' style='cursor:pointer'>Active </span>";
@@ -112,20 +115,18 @@ class Customers extends MY_Controller
                             </a>
                             <ul role="menu" class="dropdown-menu dropdown-light pull-right">';
 
-			if ($this->permissions('customers_edit') && $customers->id != 1)
+			if ($this->permissions('customers_edit') && $customers->id != 1) {
 				$str2 .= '<li>
                                     <a title="Edit Record ?" href="customers/update/' . $customers->id . '">
                                         <i class="fa fa-fw fa-edit text-blue"></i>Edit
                                     </a>
                                 </li>';
-
-			// Add repair option
-			if ($this->permissions('customers_edit') && $customers->id != 1)
 				$str2 .= '<li>
                                     <a title="Repair Sales Due Calculation" href="' . base_url('customers/repair_customer_sales_due/' . $customers->id) . '" onclick="return confirm(\'Are you sure you want to repair sales due calculation?\')">
                                         <i class="fa fa-fw fa-refresh text-orange"></i>Repair Sales Due
                                     </a>
                                 </li>';
+			}
 
 			$str2 .= '<li>
                 <a title="Customer Ledger" href="' . base_url('customers/customer_ledger/' . $customers->id) . '">
@@ -149,16 +150,20 @@ class Customers extends MY_Controller
                                         <i class="fa fa-fw fa-money text-blue"></i>Pay Return Due
                                     </a>
                                 </li>';
-			if ($this->permissions('customers_delete') && $customers->id != 1)
+			if ($this->permissions('customers_delete') && $customers->id != 1) {
 				$str2 .= '<li>
                                     <a style="cursor:pointer" title="Delete Record ?" onclick="delete_customers(' . $customers->id . ')">
                                         <i class="fa fa-fw fa-trash text-red"></i>Delete
                                     </a>
-                                </li>
-                                
-                            </ul>
+                                </li>';
+			}
 
-                        </div>';
+			// Ensure the dropdown is always properly closed
+			$str2 .= '\n                            </ul>\n\n                        </div>';
+			// If there are no actionable items, show a disabled button instead of an empty dropdown
+			if (strpos($str2, '<li') === false) {
+				$str2 = '<button class="btn btn-default btn-xs disabled">No Action</button>';
+			}
 			$row[] =  $str2;
 
 			$data[] = $row;
