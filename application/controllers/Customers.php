@@ -7,7 +7,7 @@ class Customers extends MY_Controller
 	{
 		parent::__construct();
 		$this->load_global();
-		$this->load->model('customers_model', 'customers');
+		$this->load->model('customers_model', 'customers'); // test pull
 	}
 
 	public function index()
