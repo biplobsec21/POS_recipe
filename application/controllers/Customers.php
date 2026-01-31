@@ -101,7 +101,8 @@ class Customers extends MY_Controller
 			$row[] = ($customers->sales_return_due === null) ? app_number_format(0) : app_number_format($customers->sales_return_due);
 
 			// Total Due (calculated sales due + opening balance due)
-			$row[] = app_number_format($this->customers->get_total_due_amount($customers->id));
+			$total_due = app_number_format($this->customers->get_total_due_amount($customers->id));
+			$row[] = $total_due;
 
 			if ((int)$customers->status === 1) {
 				$str = "<span onclick='update_status(" . $customers->id . ",0)' id='span_" . $customers->id . "'  class='label label-success' style='cursor:pointer'>Active </span>";
@@ -109,6 +110,7 @@ class Customers extends MY_Controller
 				$str = "<span onclick='update_status(" . $customers->id . ",1)' id='span_" . $customers->id . "'  class='label label-danger' style='cursor:pointer'> Inactive </span>";
 			}
 			$row[] = $str;
+			// Action dropdown
 			$str2 = '<div class="btn-group" title="View Account">
                             <a class="btn btn-primary btn-o dropdown-toggle" data-toggle="dropdown" href="#">
                                 Action <span class="caret"></span>
@@ -159,7 +161,7 @@ class Customers extends MY_Controller
 			}
 
 			// Ensure the dropdown is always properly closed
-			$str2 .= '\n                            </ul>\n\n                        </div>';
+			$str2 .= '</ul> </div>';
 			// If there are no actionable items, show a disabled button instead of an empty dropdown
 			if (strpos($str2, '<li') === false) {
 				$str2 = '<button class="btn btn-default btn-xs disabled">No Action</button>';
