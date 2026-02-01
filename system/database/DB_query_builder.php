@@ -2223,6 +2223,18 @@ abstract class CI_DB_query_builder extends CI_DB_driver
 	 * @param	string	$qb_key	'qb_where' or 'qb_having'
 	 * @return	string	SQL statement
 	 */
+	/**
+	 * Compile WHERE, HAVING statements
+	 *
+	 * Escapes identifiers in WHERE and HAVING statements at execution time.
+	 *
+	 * Required so that aliases are tracked properly, regardless of whether
+	 * where(), or_where(), having(), or_having are called prior to from(),
+	 * join() and dbprefix is added only if needed.
+	 *
+	 * @param	string	$qb_key	'qb_where' or 'qb_having'
+	 * @return	string	SQL statement
+	 */
 	protected function _compile_wh($qb_key)
 	{
 		if (count($this->$qb_key) > 0) {
@@ -2231,45 +2243,11 @@ abstract class CI_DB_query_builder extends CI_DB_driver
 				if (is_string($this->{$qb_key}[$i])) {
 					continue;
 				} elseif ($this->{$qb_key}[$i]['escape'] === FALSE) {
-					$this->{$qb_key}[$i] = $this->{$qb_key}[$i]['condition'] . (isset($this->{$qb_key}[$i]['value']) ? ' ' . $this->{$qb_key}[$i]['value'] : '');
+					$this->{$qb_key}[$i] = $this->{$qb_key}[$i]['condition'];
 					continue;
 				}
 
-				// Split multiple conditions
-				$conditions = preg_split(
-					'/((?:^|\s+)AND\s+|(?:^|\s+)OR\s+)/i',
-					$this->{$qb_key}[$i]['condition'],
-					-1,
-					PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
-				);
-
-				for ($ci = 0, $cc = count($conditions); $ci < $cc; $ci++) {
-					// skip extremely large conditions to avoid PCRE compilation failures
-					if (strlen($conditions[$ci]) > 20000) {
-						log_message('error', 'DB_query_builder::_compile_wh skipped large condition of length ' . strlen($conditions[$ci]));
-						continue;
-					}
-
-					// Fixed: Proper if statement syntax
-					if (($op = $this->_get_operator($conditions[$ci])) === FALSE) {
-						continue;
-					}
-
-					// The regex pattern matches conditions like "(test <= foo)"
-					if (!preg_match('/^(\()?([^\s]+)(\s+' . $op . '\s+)(.+)?(?(1)\))$/i', $conditions[$ci], $matches)) {
-						continue;
-					}
-
-					if (!empty($matches[4])) {
-						$this->_is_literal($matches[4]) or $matches[4] = $this->protect_identifiers(trim($matches[4]));
-						$matches[4] = ' ' . $matches[4];
-					}
-
-					$conditions[$ci] = $matches[1] . $this->protect_identifiers(trim($matches[2]))
-						. ' ' . trim($matches[3]) . $matches[4] . $matches[5];
-				}
-
-				$this->{$qb_key}[$i] = implode('', $conditions) . (isset($this->{$qb_key}[$i]['value']) ? ' ' . $this->{$qb_key}[$i]['value'] : '');
+				$this->{$qb_key}[$i] = $this->{$qb_key}[$i]['condition'];
 			}
 
 			return ($qb_key === 'qb_having' ? "\nHAVING " : "\nWHERE ")

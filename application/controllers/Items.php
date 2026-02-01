@@ -193,23 +193,47 @@ class Items extends MY_Controller
 	{
 		$data = array();
 		$display_json = array();
-		//if (!empty($_GET['name'])) {
-		$name = strtolower(trim($_GET['name']));
-		$sql = $this->db->query("SELECT id,item_name,item_code,stock FROM db_items where  status=1 and  (LOWER(item_name) LIKE '%$name%' or LOWER(item_code) LIKE '%$name%' or LOWER(custom_barcode) LIKE '%$name%')   limit 10");
 
-		foreach ($sql->result() as $res) {
-			$json_arr["id"] = $res->id;
-			$json_arr["value"] = $res->item_name;
-			$json_arr["label"] = $res->item_name;
-			$json_arr["item_code"] = $res->item_code;
-			$json_arr["stock"] = $res->stock;
-			array_push($display_json, $json_arr);
-			/* $display_json[] =$res->id;
-				  $display_json[] =$res->item_name;
-				  $display_json[] =$res->item_code;*/
+		if (isset($_GET['name']) && !empty($_GET['name'])) {
+			// Sanitize and escape the input
+			$name = $this->input->get('name', TRUE); // TRUE enables XSS filtering
+			$name = trim($name);
+
+			// Escape for LIKE search
+			$name = $this->db->escape_like_str($name);
+			$name = $this->db->escape_str($name);
+
+			// Build safe query with parameter binding
+			$search_term = '%' . $name . '%';
+			$escaped_search = $this->db->escape($search_term);
+
+			$sql = $this->db->query("SELECT id, item_name, item_code, stock 
+                                FROM db_items 
+                                WHERE status = 1 
+                                AND (LOWER(item_name) LIKE $escaped_search 
+                                     OR LOWER(item_code) LIKE $escaped_search 
+                                     OR LOWER(custom_barcode) LIKE $escaped_search) 
+                                LIMIT 10");
+
+			// Add error handling
+			if ($sql === FALSE) {
+				// Log the error
+				$error = $this->db->error();
+				log_message('error', 'Database error in get_json_items_details: ' . $error['message']);
+				echo json_encode($display_json);
+				exit;
+			}
+
+			foreach ($sql->result() as $res) {
+				$json_arr["id"] = $res->id;
+				$json_arr["value"] = $res->item_name;
+				$json_arr["label"] = $res->item_name;
+				$json_arr["item_code"] = $res->item_code;
+				$json_arr["stock"] = $res->stock;
+				array_push($display_json, $json_arr);
+			}
 		}
-		//}
-		//echo json_encode($data);exit;
+
 		echo json_encode($display_json);
 		exit;
 	}
