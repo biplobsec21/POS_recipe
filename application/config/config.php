@@ -381,12 +381,12 @@ $config['encryption_key'] = '';
 | except for 'cookie_prefix' and 'cookie_httponly', which are ignored here.
 |
 */
-$config['sess_driver'] = 'database';
+$config['sess_driver'] = 'files';
 $config['sess_cookie_name'] = '165_session';
-$config['sess_expiration'] = 7200;
-$config['sess_save_path'] = "ci_sessions";
+$config['sess_expiration'] = 7200;  // 2 hours
+$config['sess_save_path'] = APPPATH . 'cache/sessions/';  // Correct path
 $config['sess_match_ip'] = FALSE;
-$config['sess_time_to_update'] = 300;
+$config['sess_time_to_update'] = 300;  // 5 minutes
 $config['sess_regenerate_destroy'] = FALSE;
 
 /*
@@ -404,11 +404,12 @@ $config['sess_regenerate_destroy'] = FALSE;
 |       'cookie_httponly') will also affect sessions.
 |
 */
+// Cookie Settings - Important for production
 $config['cookie_prefix']    = '';
 $config['cookie_domain']    = '';
-$config['cookie_path']        = '/';
-$config['cookie_secure']    = FALSE;
-$config['cookie_httponly']     = FALSE;
+$config['cookie_path']      = '/';
+$config['cookie_secure']    = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');  // Auto-detect HTTPS
+$config['cookie_httponly']  = TRUE;  // Security improvement
 
 /*
 |--------------------------------------------------------------------------
