@@ -256,7 +256,7 @@ function permissions($permissions = '')
   }
 
   $tot = $CI->db->query('SELECT count(*) as tot FROM db_permissions where permissions="' . $permissions . '" and role_id=' . $CI->session->userdata('role_id'))->row()->tot;
-  if ($tot === 1) {
+  if ($tot && (int)$tot > 0) {
     return true;
   }
   return false;

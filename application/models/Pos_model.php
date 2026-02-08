@@ -81,8 +81,8 @@ class Pos_model extends CI_Model
 				$item_tax = $res2->tax;
 				$item_tax_name = $res2->tax_name;
 				$purchase_price = $res2->purchase_price;
-				$discount_type = $res2->discount_type;
-				$discount = $res2->discount;
+				$discount_type = isset($res2->discount_type) ? $res2->discount_type : null;
+				$discount = isset($res2->discount) ? $res2->discount : null;
 				$item_sales_qty = 1;
 
 				//Check Exculsive or Inclusive
