@@ -54,6 +54,7 @@ class Pos_model extends CI_Model
 		$this->db->from("db_items a");
 		$this->db->join("db_tax b", "b.id=a.tax_id", "left");
 		$this->db->where("a.status=1");
+		$this->db->where("a.stock>1");
 		//$this->db->order_by("a.stock","DESC");
 		if (!empty($id)) {
 			$this->db->where("a.category_id", $id);
