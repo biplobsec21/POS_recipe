@@ -17,17 +17,11 @@ class Sales_model extends CI_Model
 	}
 	private function _get_datatables_query()
 	{
-		// OPTIMIZATION: Use simplified query WITHOUT item joins to avoid GROUP_CONCAT overhead
-		// Items will be fetched separately in controller if needed
-
-		$this->db->select('SQL_CALC_FOUND_ROWS a.id, a.return_bit, a.sales_date, a.sales_code, a.reference_no, a.grand_total, a.payment_status, a.created_by, b.customer_name, a.paid_amount, a.sales_status, a.pos', FALSE);
+		$this->db->select('a.id, a.return_bit, a.sales_date, a.sales_code, a.reference_no, a.grand_total, a.payment_status, a.created_by, b.customer_name, a.paid_amount, a.sales_status, a.pos');
 		$this->db->select("coalesce(a.grand_total,0)-coalesce(a.paid_amount,0) as sales_due");
 		$this->db->from($this->table);
-
-		// Join with db_customers ONLY - eliminates Cartesian product
 		$this->db->join('db_customers as b', 'b.id = a.customer_id', 'left');
 
-		// Apply filters based on posted data
 		$customer_id = $this->input->post('customer_id');
 		if (!empty($customer_id)) {
 			$this->db->where('a.customer_id', (int)$customer_id);
@@ -40,7 +34,6 @@ class Sales_model extends CI_Model
 		$users = $this->input->post('user_created_by');
 
 		if (!permissions('view_all_users_sales_invoices')) {
-			// OPTIMIZATION: Remove UPPER() function to allow index usage
 			$this->db->where('a.created_by', $this->session->userdata('inv_username'));
 		}
 
@@ -55,7 +48,6 @@ class Sales_model extends CI_Model
 			$this->db->where('a.sales_date <=', $sales_to_date);
 		}
 
-		// Apply search filters with optimized column list (exclude expensive GROUP_CONCAT columns)
 		$i = 0;
 		$optimized_search_columns = array('a.id', 'a.sales_date', 'a.sales_code', 'a.reference_no', 'a.grand_total', 'a.payment_status', 'a.created_by', 'b.customer_name', 'a.paid_amount', 'a.sales_status');
 
@@ -75,7 +67,6 @@ class Sales_model extends CI_Model
 			$i++;
 		}
 
-		// Order the results - apply BEFORE LIMIT for better performance
 		if (isset($_POST['order'])) {
 			$order_column = $this->column_order[$_POST['order']['0']['column']] ?? 'a.id';
 			$order_dir = strtoupper($_POST['order']['0']['dir']) === 'ASC' ? 'ASC' : 'DESC';
@@ -176,15 +167,22 @@ class Sales_model extends CI_Model
 
 	function count_filtered()
 	{
-		// OPTIMIZATION: Use FOUND_ROWS() from previous query with SQL_CALC_FOUND_ROWS
-		$query = $this->db->query("SELECT FOUND_ROWS() as count");
-		return (int)$query->row()->count;
+		$this->_get_datatables_query();
+		$query = $this->db->get();
+		return $query->num_rows();
 	}
 
 	public function count_all()
 	{
-		// OPTIMIZATION: Use direct COUNT query instead of count_all_results()
-		$query = $this->db->select('COUNT(*) as total')->from($this->table)->get();
+		$this->db->select('COUNT(*) as total');
+		$this->db->from($this->table);
+
+		// Apply the same permission filters as in _get_datatables_query
+		if (!permissions('view_all_users_sales_invoices')) {
+			$this->db->where('a.created_by', $this->session->userdata('inv_username'));
+		}
+
+		$query = $this->db->get();
 		return (int)$query->row()->total;
 	}
 	//Datatable end

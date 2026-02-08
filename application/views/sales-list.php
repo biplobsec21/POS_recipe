@@ -11,6 +11,28 @@
       font-size: 28px !important;
     }
   </style>
+  <style type="text/css">
+    .small-box h3 {
+      font-size: 28px !important;
+    }
+
+    /* Pagination styling */
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+      padding: 5px 10px !important;
+      margin: 2px !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+      background: #3c8dbc !important;
+      color: white !important;
+      border: 1px solid #3c8dbc !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+      background: #5caddb !important;
+      color: white !important;
+    }
+  </style>
 
 </head>
 
@@ -295,7 +317,6 @@
 
         /* FOR EXPORT BUTTONS START*/
         dom: '<"row margin-bottom-12"<"col-sm-12"<"pull-left"l><"pull-right"fr><"pull-right margin-left-10 "B>>>tip',
-        /* dom:'<"row"<"col-sm-12"<"pull-left"B><"pull-right">>> <"row margin-bottom-12"<"col-sm-12"<"pull-left"l><"pull-right"fr>>>tip',*/
         buttons: {
           buttons: [{
               className: 'btn bg-red color-palette btn-flat hidden delete_btn pull-left',
@@ -348,18 +369,38 @@
           ]
         },
         /* FOR EXPORT BUTTONS END */
-        "pageLength": 50, // OPTIMIZATION: Reduced from 2000 to 50 for faster initial load (100k+ records)
-        "processing": true, //Feature control the processing indicator.
-        "serverSide": true, //Feature control DataTables' server-side processing mode.
-        "order": [], //Initial no order.
-        "responsive": true,
-        "deferRender": true, // OPTIMIZATION: Defer rendering of table body elements until needed
-        "scrollY": 400, // OPTIMIZATION: Enable scrolling instead of pagination when possible
-        "scroller": true, // OPTIMIZATION: Virtual scrolling for large datasets
-        language: {
-          processing: '<div class="text-primary bg-primary" style="position: relative;z-index:100;overflow: visible;">Processing...</div>'
-        },
 
+        "pageLength": 50,
+        "processing": true,
+        "serverSide": true,
+        "order": [],
+        "responsive": true,
+        "deferRender": true,
+
+        // REMOVE THESE THREE LINES - They're causing the pagination issue:
+        // "scrollY": 400,
+        // "scroller": true,
+
+        // ADD THESE FOR PROPER PAGINATION:
+        "paging": true,
+        "lengthMenu": [
+          [10, 25, 50, 100, 500, -1],
+          [10, 25, 50, 100, 500, "All"]
+        ],
+        "pagingType": "full_numbers", // This shows First, Previous, page numbers, Next, Last
+
+        language: {
+          processing: '<div class="text-primary bg-primary" style="position: relative;z-index:100;overflow: visible;">Processing...</div>',
+          paginate: {
+            first: "First",
+            last: "Last",
+            next: "Next",
+            previous: "Previous"
+          },
+          info: "Showing _START_ to _END_ of _TOTAL_ entries",
+          infoEmpty: "Showing 0 to 0 of 0 entries",
+          infoFiltered: "(filtered from _MAX_ total entries)"
+        },
 
         // Load data for the table's content from an Ajax source
         "ajax": {
@@ -371,37 +412,31 @@
             user_created_by: $("#user_created_by").val(),
             customer_id: $("#search_customer_id").val(),
           },
-          "cache": true, // OPTIMIZATION: Cache results
-          "timeout": 30000, // OPTIMIZATION: Set timeout for large datasets
+          "cache": true,
+          "timeout": 30000,
           complete: function(data) {
             $('.column_checkbox').iCheck({
               checkboxClass: 'icheckbox_square-orange',
-              /*uncheckedClass: 'bg-white',*/
               radioClass: 'iradio_square-orange',
-              increaseArea: '10%' // optional
+              increaseArea: '10%'
             });
             call_code();
-            //$(".delete_btn").hide();
           },
-
         },
 
-        //Set column definition initialisation properties.
         "columnDefs": [{
-            "targets": [0, 11], //first column / numbering column
-            "orderable": false, //set not orderable
+            "targets": [0, 11],
+            "orderable": false,
           },
           {
             "targets": [0],
             "className": "text-center",
           },
-
         ],
-        /*Start Footer Total*/
+
         "footerCallback": function(row, data, start, end, display) {
           var api = this.api(),
             data;
-          // Remove the formatting to get integer data for summation
           var intVal = function(i) {
             return typeof i === 'string' ?
               i.replace(/[\$,]/g, '') * 1 :
@@ -433,14 +468,12 @@
               return intVal(a) + intVal(b);
             }, 0);
 
-          //$( api.column( 0 ).footer() ).html('Total');
           $(api.column(6).footer()).html(app_number_format(total));
           $(api.column(7).footer()).html(app_number_format(paid));
           $(api.column(8).footer()).html(app_number_format(due));
-
         },
-        /*End Footer Total*/
       });
+
       new $.fn.dataTable.FixedHeader(table);
     }
     $(document).ready(function() {
