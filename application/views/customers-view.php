@@ -61,6 +61,51 @@
                   </div>
                 <?php } ?>
               </div>
+
+              <!-- ADD FILTERS HERE - Before the table -->
+              <div class="box-body">
+                <div class="row" style="margin-bottom: 15px;">
+                  <div class="col-md-3">
+                    <div class="form-group">
+                      <label for="filter_status">Customer Status</label>
+                      <select class="form-control" id="filter_status" name="filter_status">
+                        <option value="">All Customers</option>
+                        <option value="1" selected>Active</option>
+                        <option value="0">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <div class="form-group">
+                      <label for="filter_due">Due Status</label>
+                      <select class="form-control" id="filter_due" name="filter_due">
+                        <option value="">All</option>
+                        <option value="zero">Zero Due</option>
+                        <option value="non_zero">Non-Zero Due</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <div class="form-group">
+                      <label style="visibility: hidden;">Action</label>
+                      <button type="button" class="btn btn-primary btn-block" id="filter_btn">
+                        <i class="fa fa-filter"></i> Apply Filters
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <div class="form-group">
+                      <label style="visibility: hidden;">Reset</label>
+                      <button type="button" class="btn btn-default btn-block" id="reset_filter_btn">
+                        <i class="fa fa-refresh"></i> Reset Filters
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <!-- /.box-header -->
               <div class="box-body">
                 <table id="example2" class="table table-bordered table-striped" width="100%">
@@ -143,7 +188,6 @@
 
         /* FOR EXPORT BUTTONS START*/
         dom: '<"row margin-bottom-12"<"col-sm-12"<"pull-left"l><"pull-right"fr><"pull-right margin-left-10 "B>>>tip',
-        /* dom:'<"row"<"col-sm-12"<"pull-left"B><"pull-right">>> <"row margin-bottom-12"<"col-sm-12"<"pull-left"l><"pull-right"fr>>>tip',*/
         buttons: {
           buttons: [{
               className: 'btn bg-red color-palette btn-flat hidden delete_btn pull-left',
@@ -192,52 +236,58 @@
               className: 'btn bg-teal color-palette btn-flat',
               text: 'Columns'
             },
-
           ]
         },
         /* FOR EXPORT BUTTONS END */
 
-        "processing": true, //Feature control the processing indicator.
-        "serverSide": true, //Feature control DataTables' server-side processing mode.
-        "order": [], //Initial no order.
+        "processing": true,
+        "serverSide": true,
+        "order": [],
         "responsive": true,
+        "paging": true,
+        "pagingType": "full_numbers",
         language: {
-          processing: '<div class="text-primary bg-primary" style="position: relative;z-index:100;overflow: visible;">Processing...</div>'
+          processing: '<div class="text-primary bg-primary" style="position: relative;z-index:100;overflow: visible;">Processing...</div>',
+          paginate: {
+            first: "First",
+            last: "Last",
+            next: "Next",
+            previous: "Previous"
+          }
         },
+
         // Load data for the table's content from an Ajax source
         "ajax": {
           "url": "<?php echo site_url('customers/ajax_list') ?>",
           "type": "POST",
-
+          "data": function(d) {
+            d.filter_status = $('#filter_status').val();
+            d.filter_due = $('#filter_due').val();
+          },
           complete: function(data) {
             $('.column_checkbox').iCheck({
               checkboxClass: 'icheckbox_square-orange',
-              /*uncheckedClass: 'bg-white',*/
               radioClass: 'iradio_square-orange',
-              increaseArea: '10%' // optional
+              increaseArea: '10%'
             });
             call_code();
-            //$(".delete_btn").hide();
           },
-
         },
 
-        //Set column definition initialisation properties.
         "columnDefs": [{
-            "targets": [0, 9], //first column / numbering column
-            "orderable": false, //set not orderable
+            "targets": [0, 10], // Updated: was 9, now 10 because of new column
+            "orderable": false,
           },
           {
             "targets": [0],
             "className": "text-center",
           },
-
         ],
+
         /*Start Footer Total*/
         "footerCallback": function(row, data, start, end, display) {
           var api = this.api(),
             data;
-          // Remove the formatting to get integer data for summation
           var intVal = function(i) {
             return typeof i === 'string' ?
               i.replace(/[\$,]/g, '') * 1 :
@@ -276,7 +326,6 @@
             .reduce(function(a, b) {
               return intVal(a) + intVal(b);
             }, 0);
-          //$( api.column( 0 ).footer() ).html('Total');
           $(api.column(5).footer()).html(app_number_format(invoice_total));
           $(api.column(6).footer()).html(app_number_format(sales_due));
           $(api.column(7).footer()).html(app_number_format(sales_return_due));
@@ -284,7 +333,25 @@
         },
         /*End Footer Total*/
       });
+
       new $.fn.dataTable.FixedHeader(table);
+
+      // Filter button click event
+      $('#filter_btn').on('click', function() {
+        table.ajax.reload();
+      });
+
+      // Reset filter button click event
+      $('#reset_filter_btn').on('click', function() {
+        $('#filter_status').val('1'); // Reset to Active
+        $('#filter_due').val(''); // Reset to All
+        table.ajax.reload();
+      });
+
+      // Optional: Reload on Enter key in filter fields
+      $('#filter_status, #filter_due').on('change', function() {
+        table.ajax.reload();
+      });
     });
   </script>
 

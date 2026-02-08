@@ -20,29 +20,60 @@ class Customers_model extends CI_Model
 		$this->db->select($this->column_order);
 		$this->db->from($this->table);
 
+		// FILTER: Customer Status (Active/Inactive/All)
+		$filter_status = $this->input->post('filter_status');
+		if ($filter_status !== '' && $filter_status !== null) {
+			$this->db->where('a.status', (int)$filter_status);
+		}
+
+		// FILTER: Due Status (Zero/Non-Zero/All)
+		// Using calculated sales due from db_sales table
+		$filter_due = $this->input->post('filter_due');
+		if ($filter_due === 'zero') {
+			// Customers with zero total due
+			// Total Due = Opening Balance Due + Calculated Sales Due
+			$this->db->where('(
+            COALESCE(a.opening_balance, 0) - 
+            COALESCE((SELECT SUM(payment) FROM db_cobpayments WHERE customer_id = a.id), 0) + 
+            COALESCE((
+                SELECT SUM(grand_total) - SUM(paid_amount) 
+                FROM db_sales 
+                WHERE customer_id = a.id AND sales_status = "Final"
+            ), 0)
+        ) = 0', NULL, FALSE);
+		} elseif ($filter_due === 'non_zero') {
+			// Customers with non-zero total due
+			$this->db->where('(
+            COALESCE(a.opening_balance, 0) - 
+            COALESCE((SELECT SUM(payment) FROM db_cobpayments WHERE customer_id = a.id), 0) + 
+            COALESCE((
+                SELECT SUM(grand_total) - SUM(paid_amount) 
+                FROM db_sales 
+                WHERE customer_id = a.id AND sales_status = "Final"
+            ), 0)
+        ) != 0', NULL, FALSE);
+		}
+
+		// Search functionality
 		$i = 0;
-
-		foreach ($this->column_search as $item) // loop column 
-		{
-			if ($_POST['search']['value']) // if datatable send POST for search
-			{
-
-				if ($i === 0) // first loop
-				{
-					$this->db->group_start(); // open bracket. query Where with OR clause better with bracket. because maybe can combine with other WHERE with AND.
+		foreach ($this->column_search as $item) {
+			if ($_POST['search']['value']) {
+				if ($i === 0) {
+					$this->db->group_start();
 					$this->db->like($item, $_POST['search']['value']);
 				} else {
 					$this->db->or_like($item, $_POST['search']['value']);
 				}
 
-				if ((int)(count($this->column_search) - 1) === (int)$i) //last loop
-					$this->db->group_end(); //close bracket
+				if ((int)(count($this->column_search) - 1) === (int)$i) {
+					$this->db->group_end();
+				}
 			}
 			$i++;
 		}
 
-		if (isset($_POST['order'])) // here order processing
-		{
+		// Order processing
+		if (isset($_POST['order'])) {
 			$this->db->order_by($this->column_order[$_POST['order']['0']['column']], $_POST['order']['0']['dir']);
 		} else if (isset($this->order)) {
 			$order = $this->order;
@@ -69,6 +100,36 @@ class Customers_model extends CI_Model
 	public function count_all()
 	{
 		$this->db->from($this->table);
+
+		// Apply same filters as _get_datatables_query for accurate count
+		$filter_status = $this->input->post('filter_status');
+		if ($filter_status !== '' && $filter_status !== null) {
+			$this->db->where('a.status', (int)$filter_status);
+		}
+
+		$filter_due = $this->input->post('filter_due');
+		if ($filter_due === 'zero') {
+			$this->db->where('(
+            COALESCE(a.opening_balance, 0) - 
+            COALESCE((SELECT SUM(payment) FROM db_cobpayments WHERE customer_id = a.id), 0) + 
+            COALESCE((
+                SELECT SUM(grand_total) - SUM(paid_amount) 
+                FROM db_sales 
+                WHERE customer_id = a.id AND sales_status = "Final"
+            ), 0)
+        ) = 0', NULL, FALSE);
+		} elseif ($filter_due === 'non_zero') {
+			$this->db->where('(
+            COALESCE(a.opening_balance, 0) - 
+            COALESCE((SELECT SUM(payment) FROM db_cobpayments WHERE customer_id = a.id), 0) + 
+            COALESCE((
+                SELECT SUM(grand_total) - SUM(paid_amount) 
+                FROM db_sales 
+                WHERE customer_id = a.id AND sales_status = "Final"
+            ), 0)
+        ) != 0', NULL, FALSE);
+		}
+
 		return $this->db->count_all_results();
 	}
 	//Datatable end
