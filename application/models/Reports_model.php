@@ -329,33 +329,44 @@ class Reports_model extends CI_Model
 	{
 		extract($_POST);
 
-
 		$this->db->select("
-							a.item_code,
-							a.item_name,
-							c.brand_name,
-							d.category_name,
-							a.purchase_price,
-							b.tax_name,
-							a.tax_type,
-							a.sales_price,
-							a.stock,
-							");
+		a.item_code,
+		a.item_name,
+		c.brand_name,
+		d.category_name,
+		a.purchase_price,
+		b.tax_name,
+		a.tax_type,
+		a.sales_price,
+		a.stock,
+	");
 		$this->db->from("db_items as a");
 		$this->db->join("db_tax as b", "b.id=a.tax_id", "left");
 		$this->db->join("db_brands as c", "c.id=a.brand_id", "left");
 		$this->db->join("db_category as d", "d.id=a.category_id", "left");
 
 		$this->db->order_by("a.id");
+
 		if (!empty($brand_id)) {
 			$this->db->where("a.brand_id", $brand_id);
 		}
 		if (!empty($category_id)) {
 			$this->db->where("a.category_id", $category_id);
 		}
-
 		if (!empty($item_id)) {
 			$this->db->where("a.id", $item_id);
+		}
+
+		// ADD STOCK FILTER LOGIC HERE
+		if (isset($stock_filter) && $stock_filter !== '') {
+			if ($stock_filter === 'zero') {
+				// Show only items with zero stock
+				$this->db->where("a.stock", 0);
+			} elseif ($stock_filter === 'non_zero') {
+				// Show only items with non-zero stock
+				$this->db->where("a.stock >", 0);
+			}
+			// If stock_filter is empty or not set, show all (no filter applied)
 		}
 
 		//echo $this->db->get_compiled_select();exit();
@@ -391,22 +402,20 @@ class Reports_model extends CI_Model
 			}
 
 			$str .= "<tr>
-					  <td class='text-right text-bold' colspan='5'><b>Total :</b></td>
-					  <td class='text-right text-bold'>" . app_number_format($tot_purchase_price) . "</td>
-					  <td class='text-right text-bold'></td>
-					  <td class='text-right text-bold'>" . app_number_format($tot_sales_price) . "</td>
-					  <td class='text-bold'>" . app_number_format($tot_stock) . "</td>
-					  <td class='text-right text-bold'>" . app_number_format($tot_stock_value) . "</td>
-				  </tr>";
+				  <td class='text-right text-bold' colspan='5'><b>Total :</b></td>
+				  <td class='text-right text-bold'>" . app_number_format($tot_purchase_price) . "</td>
+				  <td class='text-right text-bold'></td>
+				  <td class='text-right text-bold'>" . app_number_format($tot_sales_price) . "</td>
+				  <td class='text-bold'>" . app_number_format($tot_stock) . "</td>
+				  <td class='text-right text-bold'>" . app_number_format($tot_stock_value) . "</td>
+			  </tr>";
 		} else {
 			$str .= "<tr>";
-			$str .= "<td class='text-center text-danger' colspan=8>No Records Found</td>";
+			$str .= "<td class='text-center text-danger' colspan=10>No Records Found</td>";
 			$str .= "</tr>";
 		}
 
 		return $str;
-
-		exit;
 	}
 	public function show_item_sales_report()
 	{
@@ -1500,7 +1509,6 @@ class Reports_model extends CI_Model
 	{
 		extract($_POST);
 
-
 		$this->db->select("a.item_name,COALESCE(sum(a.stock),0) as stock");
 		$this->db->select("b.brand_name");
 		$this->db->from("db_items as a");
@@ -1508,62 +1516,61 @@ class Reports_model extends CI_Model
 		$this->db->order_by("b.brand_name");
 		$this->db->group_by("a.brand_id");
 
-
-
-		$this->db->order_by("a.id");
 		if (!empty($brand_id)) {
 			$this->db->where("a.brand_id", $brand_id);
 		}
 
+		// ADD STOCK FILTER FOR BRAND-WISE REPORT
+		if (isset($stock_filter) && $stock_filter !== '') {
+			if ($stock_filter === 'zero') {
+				$this->db->having("COALESCE(sum(a.stock),0) = 0");
+			} elseif ($stock_filter === 'non_zero') {
+				$this->db->having("COALESCE(sum(a.stock),0) > 0");
+			}
+		}
 
-		//echo $this->db->get_compiled_select();exit();
 		$str = '';
 		$q1 = $this->db->get();
 		if ($q1->num_rows() > 0) {
 			$i = 0;
 			foreach ($q1->result() as $res1) {
-				//$tax_type = ($res1->tax_type=='Inclusive') ? 'Inc.' : 'Exc.';
 				$str .= "<tr>";
 				$str .= "<td>" . ++$i . "</td>";
-				//$str.="<td>".$res1->item_code."</td>";
 				$str .= "<td>" . $res1->brand_name . "</td>";
-				//$str.="<td class='text-right'>".$res1->purchase_price."</td>";
-				//$str.="<td>".$res1->tax_name."[".$tax_type."]</td>";
-				//$str.="<td class='text-right'>".$res1->sales_price."</td>";
 				$str .= "<td>" . $res1->stock . "</td>";
 				$str .= "</tr>";
 			}
 		} else {
 			$str .= "<tr>";
-			$str .= "<td class='text-center text-danger' colspan=13>No Records Found</td>";
+			$str .= "<td class='text-center text-danger' colspan=3>No Records Found</td>";
 			$str .= "</tr>";
 		}
 
 		return $str;
-		exit;
 	}
 
 	public function category_wise_stock()
 	{
 		extract($_POST);
 
-
 		$this->db->select("c.category_name,COALESCE(sum(a.stock),0) as stock");
-
 		$this->db->from("db_items as a");
-
 		$this->db->join('db_category as c', 'c.id=a.category_id', 'left');
-
 		$this->db->group_by("a.category_id");
-
-		$this->db->order_by("a.id");
 
 		if (!empty($category_id)) {
 			$this->db->where("a.category_id", $category_id);
 		}
 
+		// ADD STOCK FILTER FOR CATEGORY-WISE REPORT
+		if (isset($stock_filter) && $stock_filter !== '') {
+			if ($stock_filter === 'zero') {
+				$this->db->having("COALESCE(sum(a.stock),0) = 0");
+			} elseif ($stock_filter === 'non_zero') {
+				$this->db->having("COALESCE(sum(a.stock),0) > 0");
+			}
+		}
 
-		//echo $this->db->get_compiled_select();exit();
 		$str = '';
 		$q1 = $this->db->get();
 		if ($q1->num_rows() > 0) {
@@ -1577,12 +1584,11 @@ class Reports_model extends CI_Model
 			}
 		} else {
 			$str .= "<tr>";
-			$str .= "<td class='text-center text-danger' colspan=13>No Records Found</td>";
+			$str .= "<td class='text-center text-danger' colspan=3>No Records Found</td>";
 			$str .= "</tr>";
 		}
 
 		return $str;
-		exit;
 	}
 	/**
 	 * Get production report data - UPDATED to match actual database schema
