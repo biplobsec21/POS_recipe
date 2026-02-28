@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -57,18 +58,22 @@
 
         /* Dynamic input field font color */
         #trxId {
-            color: black; /* Default color */
+            color: black;
+            /* Default color */
         }
 
         .error {
-            color: red !important; /* Less than 10 characters */
+            color: red !important;
+            /* Less than 10 characters */
         }
 
         .valid {
-            color: green !important; /* 10 characters */
+            color: green !important;
+            /* 10 characters */
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="license-card card">
@@ -80,14 +85,14 @@
 
                 <h2 class="license-message text-danger">License expired!</h2>
                 <!-- <h5 class="license-message">Please pay the bill by bKash <br>bKash Number: 01678045810.</h5> -->
-                <h5 class="license-message">বিকাশের মাধ্যমে বিল পরিশোধ করুন <br>বিকাশ নাম্বার: ০১৬৭৮০৪৫৮১০</h5>
+                <h5 class="license-message">বিকাশের মাধ্যমে বিল পরিশোধ করুন <br>বিকাশ নাম্বার: 01937913457</h5>
                 <!-- <p class="text-center">Please submit your bKash TrxID below to renew your license.</p> -->
                 <p class="text-center">আপনার ট্রানজেকশন আইডিটি ( TrxId ) নিচে লিখে "Submit" বাটন চাপুন।</p>
-                
+
                 <!-- Form to collect bKash TrxID -->
                 <form id="trxIdForm" action="<?php echo base_url('license/submit_transaction'); ?>" method="post">
-                     <input type="hidden" name="<?php echo $this->security->get_csrf_token_name(); ?>" 
-           value="<?php echo $this->security->get_csrf_hash(); ?>">
+                    <input type="hidden" name="<?php echo $this->security->get_csrf_token_name(); ?>"
+                        value="<?php echo $this->security->get_csrf_hash(); ?>">
                     <div class="form-group">
                         <!-- <label for="trxId">bKash TrxID (10 Characters)</label> -->
                         <input type="text" class="form-control" name="trxId" id="trxId" placeholder="bKash TrxID" maxlength="10" required>
@@ -114,7 +119,7 @@
         const trxIdForm = document.getElementById('trxIdForm');
 
         // Add input event listener to dynamically change font color
-        trxIdInput.addEventListener('input', function () {
+        trxIdInput.addEventListener('input', function() {
             const trxIdValue = trxIdInput.value;
 
             if (trxIdValue.length < 10) {
@@ -127,7 +132,7 @@
         });
 
         // Form submit event listener
-        trxIdForm.addEventListener('submit', function (event) {
+        trxIdForm.addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent actual form submission
 
             const trxIdValue = trxIdInput.value;
@@ -135,11 +140,12 @@
             if (trxIdValue.length === 10) {
                 alert('Your TrxID: ' + trxIdValue + ' has been submitted. Thank you!');
                 // Programmatically submit the form after the alert
-        trxIdForm.submit();
+                trxIdForm.submit();
             } else {
                 alert('TrxID must be exactly 10 characters long.');
             }
         });
     </script>
 </body>
+
 </html>
