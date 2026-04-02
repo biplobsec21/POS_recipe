@@ -416,7 +416,7 @@
                                                       <?php
                                                       $q1 = $this->db->query("select * from db_paymenttypes where status=1");
                                                       if ($q1->num_rows() > 0) {
-                                                         echo "<option value=''>-Select-</option>";
+                                                         echo "<option value='Cash'>Cash</option>";
                                                          foreach ($q1->result() as $res1) {
                                                             echo "<option value='" . $res1->payment_type . "'>" . $res1->payment_type . "</option>";
                                                          }
