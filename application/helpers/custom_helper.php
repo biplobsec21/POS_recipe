@@ -154,17 +154,21 @@ function record_supplier_payment($supplier_id = null)
 }
 function calculate_inclusive($amount, $tax)
 {
+  $amount = (float)$amount;
+  $tax = (float)$tax;
   $tot = ($amount / (($tax / 100) + 1) / 10);
   return number_format($tot, 2, ".", "");
 }
 function calculate_exclusive($amount, $tax)
 {
+  $amount = (float)$amount;
+  $tax = (float)$tax;
   $tot = (($amount * $tax) / (100));
   return number_format($tot, 2, ".", "");
 }
 function app_number_format($value = '')
 {
-  return (empty($value)) ? $value : number_format($value, 2);
+  return (empty($value)) ? $value : number_format((float)$value, 2);
 }
 function show_upi_code()
 {
