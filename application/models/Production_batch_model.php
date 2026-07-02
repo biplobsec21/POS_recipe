@@ -46,7 +46,12 @@ class Production_batch_model extends CI_Model
     {
         $this->db->where($this->id, $id);
         $this->db->update($this->table, $data);
-        return $this->db->affected_rows();
+
+        if ($this->db->error()['code'] != 0) {
+            return false;
+        }
+
+        return true;
     }
 
     // Delete production batch

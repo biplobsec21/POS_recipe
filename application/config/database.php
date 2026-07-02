@@ -82,7 +82,7 @@ $db['default'] = array(
 	'hostname' => getenv('DB_HOSTNAME') ?: 'localhost',
 	'username' => getenv('DB_USERNAME') ?: 'root',
 	'password' => getenv('DB_PASSWORD') ?: '',
-	'database' => getenv('DB_DATABASE') ?: 'pos_recipe',
+	'database' => getenv('DB_DATABASE') ?: 'piooneer_testing',
 
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',

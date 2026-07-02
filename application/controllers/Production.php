@@ -27,7 +27,7 @@ class Production extends MY_Controller
 
     public function add()
     {
-        // $this->permission_check('production_add');
+        $this->permission_check('production_add');
         $data = $this->data;
         $data['page_title'] = 'Add Production Batch';
         $data['recipes'] = $this->Recipe_model->get_all();
@@ -289,7 +289,7 @@ class Production extends MY_Controller
 
     public function edit($id)
     {
-        // $this->permission_check('production_edit');
+        $this->permission_check('production_edit');
         $data = $this->data;
         $data['page_title'] = 'Edit Production Batch';
 
@@ -338,23 +338,16 @@ class Production extends MY_Controller
             'recipe_id' => $recipe_id,
             'batch_quantity' => $batch_quantity,
             'notes' => $notes,
-            'updated_by' => $this->session->userdata('inv_userid'),
-            'updated_at' => date('Y-m-d H:i:s'),
         );
 
-        $result = $this->Production_batch_model->update($id, $production_batch_data);
+        $this->Production_batch_model->update($id, $production_batch_data);
 
-        if ($result) {
-            if ($this->db->trans_status() === FALSE) {
-                $this->db->trans_rollback();
-                echo "Failed to update production batch. Please try again.";
-            } else {
-                $this->db->trans_commit();
-                echo "success";
-            }
-        } else {
+        if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();
             echo "Failed to update production batch. Please try again.";
+        } else {
+            $this->db->trans_commit();
+            echo "success";
         }
     }
 

@@ -300,9 +300,17 @@ class Roles_model extends CI_Model {
 							                            'gv_view',
 							                            'gv_edit',
 							                            'gv1_add', // for database backup
-							                            'database_backup'
-							                            
-													)));
+			'database_backup',
+			'recipe_add',
+			'recipe_edit',
+			'recipe_delete',
+			'recipe_view',
+			'production_add',
+			'production_edit',
+			'production_delete',
+			'production_view',
+			'production_approve'
+		)));
 
 
 		$this->db->trans_begin();		

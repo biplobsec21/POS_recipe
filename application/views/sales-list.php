@@ -376,6 +376,7 @@
         "order": [],
         "responsive": true,
         "deferRender": true,
+        "searchDelay": 600,
 
         // REMOVE THESE THREE LINES - They're causing the pagination issue:
         // "scrollY": 400,
