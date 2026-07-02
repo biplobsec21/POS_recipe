@@ -121,7 +121,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 buttons: {
                     buttons: [{
                             className: 'btn bg-red color-palette btn-flat hidden delete_btn pull-left',
-                            text: 'Delete',
+                            text: 'Reverse / Delete',
                             action: function(e, dt, node, config) {
                                 multi_delete();
                             }

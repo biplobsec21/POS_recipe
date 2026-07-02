@@ -70,6 +70,66 @@ $(document).ready(function() {
     });
 });
 
+function multi_delete() {
+    var base_url = $("#base_url").val();
+    var selected = $('.column_checkbox:checked');
+
+    if (selected.length === 0) {
+        toastr["error"]("Please select at least one production batch.");
+        return;
+    }
+
+    if (!confirm("Are you sure you want to reverse approved batches and delete draft batches?")) {
+        return;
+    }
+
+    var ids = [];
+    selected.each(function () {
+        ids.push($(this).val());
+    });
+
+    $.ajax({
+        type: 'POST',
+        url: base_url + 'production/multi_delete',
+        data: { ids: ids },
+        traditional: true,
+        success: function (result) {
+            if (result.trim() === "success") {
+                toastr["success"]("Selected production batches processed successfully!");
+                $('#example2').DataTable().ajax.reload();
+                $('.delete_btn').addClass('hidden').hide();
+                $('.group_check').prop('checked', false).iCheck('update');
+            } else {
+                toastr["error"](result);
+            }
+        },
+        error: function () {
+            toastr["error"]("Failed to process selected production batches.");
+        }
+    });
+}
+
+function reverse_production(id) {
+    if (confirm("Are you sure you want to reverse this production batch?")) {
+        var base_url = $("#base_url").val();
+        $.ajax({
+            type: 'POST',
+            url: base_url + 'production/reverse/' + id,
+            success: function (result) {
+                if (result.trim() === "success") {
+                    toastr["success"]("Production Batch Reversed Successfully!");
+                    $('#example2').DataTable().ajax.reload();
+                } else {
+                    toastr["error"](result);
+                }
+            },
+            error: function () {
+                toastr["error"]("Failed to reverse production batch.");
+            }
+        });
+    }
+}
+
 function approve_production(id) {
     if (confirm("Are you sure you want to approve this production batch?")) {
         var base_url = $("#base_url").val();
@@ -89,18 +149,21 @@ function approve_production(id) {
 }
 
 function delete_production(id) {
-    if (confirm("Are you sure you want to delete this production batch?")) {
+    if (confirm("Are you sure you want to delete this draft production batch?")) {
         var base_url = $("#base_url").val();
         $.ajax({
             type: 'POST',
             url: base_url + 'production/delete/' + id,
             success: function(result) {
-                if (result == "success") {
+                if (result.trim() === "success") {
                     toastr["success"]("Production Batch Deleted Successfully!");
                     $('#example2').DataTable().ajax.reload();
                 } else {
-                    toastr["error"]("Failed to delete production batch. Please try again.");
+                    toastr["error"](result);
                 }
+            },
+            error: function () {
+                toastr["error"]("Failed to delete production batch.");
             }
         });
     }

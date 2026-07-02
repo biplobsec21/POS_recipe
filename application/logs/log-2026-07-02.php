@@ -29,3 +29,8 @@ ERROR - 2026-07-02 16:01:13 --> Severity: Warning --> Undefined variable $curren
 ERROR - 2026-07-02 16:01:13 --> Severity: Warning --> Undefined variable $currency /Users/hello/Herd/eva/application/views/production/view.php 245
 ERROR - 2026-07-02 10:01:18 --> 404 Page Not Found: Theme/plugins
 ERROR - 2026-07-02 10:02:09 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-07-02 10:20:01 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-07-02 10:20:12 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-07-02 10:20:41 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-07-02 10:32:15 --> 404 Page Not Found: Theme/plugins
+ERROR - 2026-07-02 10:34:52 --> 404 Page Not Found: Theme/plugins

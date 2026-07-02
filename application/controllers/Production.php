@@ -362,62 +362,12 @@ class Production extends MY_Controller
             }
 
             if ($production_batch->status == 'Approved') {
-                $recipe = $this->Recipe_model->get_by_id($production_batch->recipe_id);
-                if (!$recipe) {
-                    throw new Exception("Recipe not found.");
+                $this->_reverse_batch($production_batch, $id);
+            } else {
+                $delete_result = $this->Production_batch_model->delete($id);
+                if (!$delete_result) {
+                    throw new Exception("Failed to delete production batch.");
                 }
-
-                $recipe_items = $this->Recipe_item_model->get_by_recipe_id($production_batch->recipe_id);
-
-                // Revert stock adjustments for ingredients - USING PROPER STOCK ENTRY METHOD
-                foreach ($recipe_items as $item) {
-                    $consumed_qty = $item->quantity * $production_batch->batch_quantity;
-
-                    // Add back the consumed stock
-                    $stock_result = $this->Items_model->stock_entry(
-                        date('Y-m-d H:i:s'),
-                        $item->item_id,
-                        $consumed_qty, // Positive to add back
-                        'Production Revert - Batch: ' . $production_batch->batch_code
-                    );
-
-                    if (!$stock_result) {
-                        throw new Exception("Failed to revert stock for item ID: " . $item->item_id);
-                    }
-
-                    // UPDATE items quantity in items table
-                    $this->load->model('pos_model');
-                    $update_qty_result = $this->pos_model->update_items_quantity($item->item_id);
-                    if (!$update_qty_result) {
-                        throw new Exception("Failed to update item quantity during revert.");
-                    }
-                }
-
-                // Remove output product - USING PROPER STOCK ENTRY METHOD
-                $output_qty = $recipe->yield_quantity * $production_batch->batch_quantity;
-                $output_stock_result = $this->Items_model->stock_entry(
-                    date('Y-m-d H:i:s'),
-                    $recipe->output_product_id,
-                    -$output_qty, // Negative to remove
-                    'Production Revert - Batch: ' . $production_batch->batch_code
-                );
-
-                if (!$output_stock_result) {
-                    throw new Exception("Failed to revert output product stock.");
-                }
-
-                // UPDATE items quantity in items table for output product
-                $this->load->model('pos_model');
-                $update_output_qty_result = $this->pos_model->update_items_quantity($recipe->output_product_id);
-                if (!$update_output_qty_result) {
-                    throw new Exception("Failed to update output product quantity during revert.");
-                }
-            }
-
-            // Delete the production batch
-            $delete_result = $this->Production_batch_model->delete($id);
-            if (!$delete_result) {
-                throw new Exception("Failed to delete production batch.");
             }
 
             if ($this->db->trans_status() === FALSE) {
@@ -429,6 +379,135 @@ class Production extends MY_Controller
         } catch (Exception $e) {
             $this->db->trans_rollback();
             echo $e->getMessage();
+        }
+    }
+
+    public function reverse($id)
+    {
+        $this->db->trans_begin();
+
+        try {
+            $production_batch = $this->Production_batch_model->get_by_id($id);
+            if (!$production_batch) {
+                throw new Exception("Production batch not found.");
+            }
+
+            if ($production_batch->status != 'Approved') {
+                throw new Exception("Only approved production batches can be reversed.");
+            }
+
+            $this->_reverse_batch($production_batch, $id);
+
+            if ($this->db->trans_status() === FALSE) {
+                throw new Exception("Database transaction failed.");
+            }
+
+            $this->db->trans_commit();
+            echo "success";
+        } catch (Exception $e) {
+            $this->db->trans_rollback();
+            echo $e->getMessage();
+        }
+    }
+
+    private function _reverse_batch($production_batch, $id)
+    {
+        $recipe = $this->Recipe_model->get_by_id($production_batch->recipe_id);
+        if (!$recipe) {
+            throw new Exception("Recipe not found.");
+        }
+
+        $recipe_items = $this->Recipe_item_model->get_by_recipe_id($production_batch->recipe_id);
+
+        foreach ($recipe_items as $item) {
+            $consumed_qty = $item->quantity * $production_batch->batch_quantity;
+
+            $stock_result = $this->Items_model->stock_entry(
+                date('Y-m-d H:i:s'),
+                $item->item_id,
+                $consumed_qty,
+                'Production Revert - Batch: ' . $production_batch->batch_code
+            );
+
+            if (!$stock_result) {
+                throw new Exception("Failed to revert stock for item ID: " . $item->item_id);
+            }
+
+            $this->load->model('pos_model');
+            $update_qty_result = $this->pos_model->update_items_quantity($item->item_id);
+            if (!$update_qty_result) {
+                throw new Exception("Failed to update item quantity during revert.");
+            }
+        }
+
+        $output_qty = $recipe->yield_quantity * $production_batch->batch_quantity;
+        $output_stock_result = $this->Items_model->stock_entry(
+            date('Y-m-d H:i:s'),
+            $recipe->output_product_id,
+            -$output_qty,
+            'Production Revert - Batch: ' . $production_batch->batch_code
+        );
+
+        if (!$output_stock_result) {
+            throw new Exception("Failed to revert output product stock.");
+        }
+
+        $this->load->model('pos_model');
+        $update_output_qty_result = $this->pos_model->update_items_quantity($recipe->output_product_id);
+        if (!$update_output_qty_result) {
+            throw new Exception("Failed to update output product quantity during revert.");
+        }
+
+        $notes = $production_batch->notes;
+        if (stripos($notes, 'Reversed') === false) {
+            $notes = trim($notes . "\nReversed on " . date('Y-m-d H:i:s'));
+        }
+
+        $update_result = $this->Production_batch_model->update($id, array(
+            'status' => 'cancelled',
+            'notes' => $notes,
+        ));
+
+        if (!$update_result) {
+            throw new Exception("Failed to update production batch status.");
+        }
+    }
+
+    public function multi_delete()
+    {
+        $this->permission_check('production_delete');
+
+        $ids = $this->input->post('ids');
+        if (empty($ids)) {
+            echo 'No records selected.';
+            return;
+        }
+
+        $this->db->trans_begin();
+        $deleted = 0;
+        $reversed = 0;
+
+        foreach ((array) $ids as $id) {
+            $production_batch = $this->Production_batch_model->get_by_id($id);
+            if (!$production_batch) {
+                continue;
+            }
+
+            if ($production_batch->status == 'Approved') {
+                $this->_reverse_batch($production_batch, $id);
+                $reversed++;
+            } else {
+                $this->Production_batch_model->delete($id);
+                $deleted++;
+            }
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo 'Failed to process selected production batches.';
+        } else {
+            $this->db->trans_commit();
+            echo ($deleted > 0 || $reversed > 0) ? 'success' : 'No actions applied.';
         }
     }
 
@@ -463,7 +542,9 @@ class Production extends MY_Controller
             $row[] = $cost_details;
 
             $row[] = show_date($production->created_at);
-            $row[] = '<span class="label label-' . ($production->status == 'Approved' ? 'success' : ($production->status == 'Draft' ? 'warning' : 'default')) . '">' . $production->status . '</span>';
+            $status_label = $production->status == 'Approved' ? 'Approved' : ($production->status == 'cancelled' ? 'Reversed' : 'Draft');
+            $status_class = $production->status == 'Approved' ? 'success' : ($production->status == 'cancelled' ? 'danger' : 'warning');
+            $row[] = '<span class="label label-' . $status_class . '">' . $status_label . '</span>';
             $row[] = $this->_get_username($production->created_by);
 
             // Action buttons
@@ -471,7 +552,9 @@ class Production extends MY_Controller
             if ($this->permissions('production_edit') && $production->status == 'Draft') {
                 $buttons .= '<a class="btn btn-primary btn-sm" href="' . base_url('production/edit/' . $production->id) . '" title="Edit"><i class="fa fa-edit"></i></a>';
             }
-            if ($this->permissions('production_delete') && $production->status != 'Approved') {
+            if ($this->permissions('production_delete') && $production->status == 'Approved') {
+                $buttons .= ' <a class="btn btn-warning btn-sm" href="javascript:void(0)" title="Reverse" onclick="reverse_production(' . $production->id . ')"><i class="fa fa-undo"></i></a>';
+            } elseif ($this->permissions('production_delete') && $production->status != 'Approved' && $production->status != 'cancelled') {
                 $buttons .= ' <a class="btn btn-danger btn-sm" href="javascript:void(0)" title="Delete" onclick="delete_production(' . $production->id . ')"><i class="fa fa-trash"></i></a>';
             }
             if ($production->status == 'Draft' && $this->permissions('production_approve')) {

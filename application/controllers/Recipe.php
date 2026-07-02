@@ -173,6 +173,32 @@ class Recipe extends MY_Controller
         }
     }
 
+    public function multi_delete()
+    {
+        $this->permission_check('recipe_delete');
+
+        $ids = $this->input->post('ids');
+        if (empty($ids)) {
+            echo 'No records selected.';
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        foreach ((array) $ids as $id) {
+            $this->Recipe_item_model->delete_by_recipe_id($id);
+            $this->Recipe_model->delete($id);
+        }
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->db->trans_rollback();
+            echo 'Failed to delete selected recipes.';
+        } else {
+            $this->db->trans_commit();
+            echo 'success';
+        }
+    }
+
     public function ajax_list()
     {
         // Use Recipe_model datatables helpers
