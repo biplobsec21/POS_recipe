@@ -25,21 +25,26 @@ $(document).ready(function(){
                   url: url_of_item,
                   type: "post",
                   dataType: 'json',
-                  delay: 250,
+               delay: 400,
                   data: function (params) {
                      return {
-                           searchTerm: params.term, // search term
+                        searchTerm: params.term,
                            store_id:$("#store_id").val(),
                            item_type: getItemType(),
                            category_id: getCategoryId(),
                      };
                   },
+               transport: function (params, success, failure) {
+                  // Cancel any in-flight request before firing a new one
+                  if (window._itemAjaxReq) {
+                     window._itemAjaxReq.abort();
+                  }
+                  window._itemAjaxReq = $.ajax(params);
+                  window._itemAjaxReq.then(success, failure);
+                  return window._itemAjaxReq;
+               },
                   processResults: function (response) {
-
-                  return {
-                     results: response
-                  };
-
+                     return { results: response };
                   },
                   cache: false
             },
@@ -103,8 +108,7 @@ function autoLoadFirstItem(item_id='') {
           type: 'POST',
           url: url_of_item+item_id,
           dataType: 'json',
-          delay: 250,
-          async: false, // Make the request synchronous
+         async: true,
           data:{
             store_id : $("#store_id").val(),
             item_type: getItemType(),

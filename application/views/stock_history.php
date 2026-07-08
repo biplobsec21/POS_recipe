@@ -163,6 +163,7 @@
                                         <p>Total Purchase Return: <span class="quantity-negative"><?= $stock_summary['total_purchase_return']; ?> <?= $item_info->unit_name; ?></span></p>
                                         <p>Production Consumption: <span class="quantity-negative"><?= $stock_summary['production_consumption']; ?> <?= $item_info->unit_name; ?></span></p>
                                         <p>Stock Transfers (Out): <span class="quantity-negative"><?= $stock_summary['stock_transfers_out']; ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Damaged: <span class="quantity-negative"><?= $stock_summary['total_damaged']; ?> <?= $item_info->unit_name; ?></span></p>
                                     </div>
                                 </div>
                             </div>
@@ -221,6 +222,7 @@
                                                 <?= in_array($transaction->type, ['Purchase', 'Sell Return', 'Stock In', 'Production']) ? 'label-success' : ''; ?>
                                                 <?= in_array($transaction->type, ['Sell', 'Purchase Return', 'Stock Out', 'Production Consume']) ? 'label-danger' : ''; ?>
                                                 <?= $transaction->type == 'Adjustment' ? 'label-warning' : ''; ?>
+                                                <?= (strpos($transaction->type, 'Damage') === 0) ? 'label-danger' : ''; ?>
                                             ">
                                                         <?= $transaction->type; ?>
                                                     </span>
@@ -333,6 +335,8 @@
                                 labelClass = 'label-danger';
                             } else if (data == 'Adjustment') {
                                 labelClass = 'label-warning';
+                            } else if (data.startsWith('Damage')) {
+                                labelClass = 'label-danger';
                             }
                             return '<span class="label ' + labelClass + '">' + data + '</span>';
                         }

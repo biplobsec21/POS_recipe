@@ -140,26 +140,22 @@ $("#item_search").bind("paste", function (e) {
 });
 $("#item_search").autocomplete({
   source: function (data, cb) {
-    $.ajax({
+    // Cancel any in-flight search request before starting a new one
+    if (window._itemSearchReq) {
+      window._itemSearchReq.abort();
+    }
+    window._itemSearchReq = $.ajax({
       autoFocus: true,
       url: $("#base_url").val() + 'items/get_json_items_details',
       method: 'GET',
       dataType: 'json',
-      /*showHintOnFocus: true,
-autoSelect: true, 
- 
-selectInitial :true,*/
-
       data: {
         name: data.term,
-        /*warehouse_id:$("#warehouse_id").val().trim(),*/
       },
       success: function (res) {
-        //console.log(res);
         var result;
         result = [
           {
-            //label: 'No Records Found '+data.term,
             label: 'No Records Found ',
             value: ''
           }
@@ -173,9 +169,6 @@ selectInitial :true,*/
               id: el.id,
               item_name: el.value,
               stock: el.stock,
-              // mobile: el.mobile,
-              //customer_dob: el.customer_dob,
-              //address: el.address,
             };
           });
         }
@@ -189,11 +182,9 @@ selectInitial :true,*/
       $(this).data('ui-autocomplete')._trigger('select', 'autocompleteselect', ui);
       $(this).autocomplete("close");
     }
-    //console.log(ui.content[0].id);
   },
-  //loader start
-  search: function (e, ui) {
-  },
+  delay: 400,
+  minLength: 1,
   select: function (e, ui) {
 
     //$("#mobile").val(ui.item.mobile)

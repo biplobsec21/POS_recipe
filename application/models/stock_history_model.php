@@ -22,7 +22,8 @@ class Stock_history_model extends CI_Model
             'stock_transfers_out' => 0,
             'current_stock' => 0,
             'production_output' => 0,
-            'production_consumption' => 0
+            'production_consumption' => 0,
+            'total_damaged' => 0,
         );
 
         // Get current stock
@@ -105,6 +106,16 @@ class Stock_history_model extends CI_Model
         AND (note NOT LIKE '%Production%' OR note IS NULL)
     ");
         if ($query) $summary['total_stock_adjustment'] = $query->row()->total;
+
+        // Total Damaged (approved damage entries only)
+        $query = $this->db->query("
+        SELECT COALESCE(SUM(di.damage_qty), 0) as total
+        FROM db_damageitems di
+        JOIN db_damage d ON d.id = di.damage_id
+        WHERE di.item_id = $item_id
+        AND d.status = 'approved'
+    ");
+        if ($query) $summary['total_damaged'] = $query->row()->total;
 
         return $summary;
     }
@@ -246,6 +257,31 @@ class Stock_history_model extends CI_Model
         $production_consume = $this->db->get();
         if ($production_consume) $transactions = array_merge($transactions, $production_consume->result());
 
+        // 7. Damage Transactions (approved only — stock was actually deducted)
+        $this->db->select("
+        CONCAT('Damage (', d.damage_type, ')') as type,
+        -di.damage_qty as quantity_change,
+        di.damage_qty as absolute_quantity,
+        d.damage_date as transaction_date,
+        d.damage_code as reference_no,
+        CONCAT(
+            'Added by: ', COALESCE(u.username, 'Unknown'),
+            ' | Type: ', d.damage_type,
+            CASE WHEN d.reason IS NOT NULL AND d.reason != '' THEN CONCAT(' | ', d.reason) ELSE '' END
+        ) as customer_supplier_info,
+        d.id as source_id,
+        'damage' as source_table,
+        di.id as detail_id,
+        CONCAT(d.damage_date, ' ', COALESCE(d.created_time, '00:00:00')) as sort_date
+    ", false);
+        $this->db->from('db_damageitems di');
+        $this->db->join('db_damage d',  'd.id = di.damage_id',  'left');
+        $this->db->join('db_users u',   'u.id = d.created_by',  'left');
+        $this->db->where('di.item_id', $item_id);
+        $this->db->where('d.status', 'approved');
+        $damage_transactions = $this->db->get();
+        if ($damage_transactions) $transactions = array_merge($transactions, $damage_transactions->result());
+
         // Sort all transactions by date (oldest first for proper balance calculation)
         usort($transactions, function ($a, $b) {
             $time_a = strtotime($a->sort_date);
@@ -341,7 +377,14 @@ class Stock_history_model extends CI_Model
             $this->db->from('inventory_movements')
                 ->where('item_id', $item_id)
                 ->where('type', 'PRODUCTION_CONSUME')
-                ->count_all_results()
+                ->count_all_results(),
+
+            // Damage (approved only)
+            $this->db->from('db_damageitems di')
+                ->join('db_damage d', 'd.id = di.damage_id')
+                ->where('di.item_id', $item_id)
+                ->where('d.status', 'approved')
+                ->count_all_results(),
         ];
 
         return array_sum($counts);

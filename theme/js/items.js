@@ -296,9 +296,19 @@ function calculate_purchase_price(){
 	//$("#purchase_price").val( (price + (price*tax)/parseFloat(100)).toFixed(2));
 	//calculate_sales_price();
 }
+// Debounce timer for price/margin recalculations — prevents
+// rapid keystrokes from triggering cascading recalcs on every character.
+var _itemsCalcTimer;
+function _itemsDebounce(fn, ms) {
+	clearTimeout(_itemsCalcTimer);
+	_itemsCalcTimer = setTimeout(fn, ms || 300);
+}
+
 $("#price").keyup(function(event) {
-	calculate_purchase_price();
-	calculate_sales_price();
+	_itemsDebounce(function () {
+		calculate_purchase_price();
+		calculate_sales_price();
+	});
 });
 $("#tax_id").on("change",function(event) {
 	calculate_purchase_price();
@@ -322,7 +332,9 @@ $("#tax_type").on("change",function(event) {
 	calculate_final_price();
 });
 $("#profit_margin").keyup(function(event) {
-	calculate_sales_price();
+	_itemsDebounce(function () {
+		calculate_sales_price();
+	});
 });
 
 //END
@@ -345,8 +357,10 @@ function calculate_profit_margin(){
 	$("#profit_margin").val(profit_margin.toFixed(0));
 }
 $("#sales_price").keyup(function(event) {
-	calculate_profit_margin();
-	calculate_final_price();
+	_itemsDebounce(function () {
+	  calculate_profit_margin();
+	  calculate_final_price();
+  });
 });
 //END
 

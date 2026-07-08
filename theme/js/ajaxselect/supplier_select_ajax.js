@@ -23,18 +23,23 @@ $(document).ready(function(){
                   url: url_,
                   type: "post",
                   dataType: 'json',
-                  delay: 250,
+               delay: 400,
                   data: function (params) {
                      return {
-                           searchTerm: params.term, // search term
+                        searchTerm: params.term,
                      };
                   },
+               transport: function (params, success, failure) {
+                  // Cancel any in-flight request before firing a new one
+                  if (window._supplierAjaxReq) {
+                     window._supplierAjaxReq.abort();
+                  }
+                  window._supplierAjaxReq = $.ajax(params);
+                  window._supplierAjaxReq.then(success, failure);
+                  return window._supplierAjaxReq;
+               },
                   processResults: function (response) {
-
-                  return {
-                     results: response
-                  };
-
+                     return { results: response };
                   },
                   cache: false
             },
@@ -100,8 +105,7 @@ function autoLoadFirstsupplier(supplier_id='') {
           type: 'POST',
           url: url_+supplier_id,
           dataType: 'json',
-          delay: 250,
-          async: false, // Make the request synchronous
+         async: true,
           
       }).then(function (serverResponse) {
 

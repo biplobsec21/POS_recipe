@@ -358,6 +358,25 @@ $CI = &get_instance();
       <?php } ?>
       <!-- End Recipe Management -->
 
+      <?php if ($CI->permissions('damage_add') || $CI->permissions('damage_view')) { ?>
+        <li class="damage-list-active-li damage-active-li treeview">
+          <a href="#">
+            <i class="fa fa-bug text-aqua"></i> <span>Damage Management</span>
+            <span class="pull-right-container">
+              <i class="fa fa-angle-left pull-right"></i>
+            </span>
+          </a>
+          <ul class="treeview-menu">
+            <?php if ($CI->permissions('damage_add')) { ?>
+              <li class="damage-active-li"><a href="<?php echo $base_url; ?>damage/add"><i class="fa fa-plus-square-o "></i> <span>New Damage</span></a></li>
+            <?php } ?>
+            <?php if ($CI->permissions('damage_view')) { ?>
+              <li class="damage-list-active-li"><a href="<?php echo $base_url; ?>damage"><i class="fa fa-list "></i> <span>Damage List</span></a></li>
+            <?php } ?>
+          </ul>
+        </li>
+      <?php } ?>
+
       <?php if ($CI->permissions('expense_add') || $CI->permissions('expense_view') || $CI->permissions('expense_category_add') || $CI->permissions('expense_category_view')) { ?>
         <li class="expense-list-active-li expense-active-li expense-category-active-li expense-category-list-active-li treeview">
           <a href="#">

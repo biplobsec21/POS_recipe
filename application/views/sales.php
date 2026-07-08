@@ -230,7 +230,7 @@
                                  <div class="form-group">
                                     <label for="other_charges_input" class="col-sm-4 control-label"><?= $this->lang->line('other_charges'); ?></label>
                                     <div class="col-sm-4">
-                                       <input type="text" class="form-control text-right only_currency" id="other_charges_input" name="other_charges_input" onkeyup="final_total();" value="<?php echo  $other_charges_input; ?>">
+                                       <input type="text" class="form-control text-right only_currency" id="other_charges_input" name="other_charges_input" onkeyup="debounced_final_total();" value="<?php echo  $other_charges_input; ?>">
                                     </div>
                                     <div class="col-sm-4">
                                        <select class="form-control " id="other_charges_tax_id" name="other_charges_tax_id" onchange="final_total();" style="width: 100%;">
@@ -259,7 +259,7 @@
                                  <div class="form-group">
                                     <label for="discount_to_all_input" class="col-sm-4 control-label"><?= $this->lang->line('discount_on_all'); ?></label>
                                     <div class="col-sm-4">
-                                       <input type="text" class="form-control  text-right only_currency" id="discount_to_all_input" name="discount_to_all_input" onkeyup="enable_or_disable_item_discount();" value="<?php echo  $discount_input; ?>">
+                                       <input type="text" class="form-control  text-right only_currency" id="discount_to_all_input" name="discount_to_all_input" onkeyup="debounced_discount_recalc();" value="<?php echo  $discount_input; ?>">
                                     </div>
                                     <div class="col-sm-4">
                                        <select class="form-control" onchange="final_total();" id='discount_to_all_type' name="discount_to_all_type">
@@ -878,6 +878,28 @@
             toastr["warning"]("Oops! You have only " + available_qty + " items in Stock");
          }
          calculate_tax(i);
+      }
+
+      /* ---- DEBOUNCE HELPERS ----
+         Prevents final_total() and enable_or_disable_item_discount()
+         from firing on every single keystroke while the user is typing
+         into the Other Charges or Discount fields.
+         300ms after the last keystroke the real function fires once.
+      */
+      var _finalTotalTimer;
+      function debounced_final_total() {
+         clearTimeout(_finalTotalTimer);
+         _finalTotalTimer = setTimeout(function() {
+            final_total();
+         }, 300);
+      }
+
+      var _discountTimer;
+      function debounced_discount_recalc() {
+         clearTimeout(_discountTimer);
+         _discountTimer = setTimeout(function() {
+            enable_or_disable_item_discount();
+         }, 300);
       }
    </script>
 

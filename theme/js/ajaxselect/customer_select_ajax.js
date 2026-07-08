@@ -23,18 +23,23 @@ $(document).ready(function(){
                   url: url_,
                   type: "post",
                   dataType: 'json',
-                  delay: 250,
+               delay: 400,
                   data: function (params) {
                      return {
-                           searchTerm: params.term, // search term
+                        searchTerm: params.term,
                      };
                   },
+               transport: function (params, success, failure) {
+                  // Cancel any in-flight request before firing a new one
+                  if (window._customerAjaxReq) {
+                     window._customerAjaxReq.abort();
+                  }
+                  window._customerAjaxReq = $.ajax(params);
+                  window._customerAjaxReq.then(success, failure);
+                  return window._customerAjaxReq;
+               },
                   processResults: function (response) {
-
-                  return {
-                     results: response
-                  };
-
+                     return { results: response };
                   },
                   cache: false
             },
@@ -101,8 +106,7 @@ function autoLoadFirstCustomer(customer_id='') {
           type: 'POST',
           url: url_+customer_id,
           dataType: 'json',
-          delay: 250,
-          async: false, // Make the request synchronous
+         async: true,
           
       }).then(function (serverResponse) {
 

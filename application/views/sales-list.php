@@ -310,186 +310,129 @@
     }
     //Customer Selection Box Search - END
 
+    // ── Single persistent DataTable instance ──────────────────────
+    // Never destroyed/recreated. Filter changes call .ajax.reload()
+    // so searchDelay:600 stays effective for the search box too.
+    var salesTable;
 
-    function load_datatable(argument) {
-      //datatables
-      var table = $('#example2').DataTable({
+    $(document).ready(function() {
 
-        /* FOR EXPORT BUTTONS START*/
+      salesTable = $('#example2').DataTable({
+
         dom: '<"row margin-bottom-12"<"col-sm-12"<"pull-left"l><"pull-right"fr><"pull-right margin-left-10 "B>>>tip',
         buttons: {
           buttons: [{
               className: 'btn bg-red color-palette btn-flat hidden delete_btn pull-left',
               text: 'Delete',
-              action: function(e, dt, node, config) {
-                multi_delete();
-              }
+              action: function(e, dt, node, config) { multi_delete(); }
             },
-            {
-              extend: 'copy',
-              className: 'btn bg-teal color-palette btn-flat',
-              exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-              }
-            },
-            {
-              extend: 'excel',
-              className: 'btn bg-teal color-palette btn-flat',
-              exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-              }
-            },
-            {
-              extend: 'pdf',
-              className: 'btn bg-teal color-palette btn-flat',
-              exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-              }
-            },
-            {
-              extend: 'print',
-              className: 'btn bg-teal color-palette btn-flat',
-              exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-              }
-            },
-            {
-              extend: 'csv',
-              className: 'btn bg-teal color-palette btn-flat',
-              exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-              }
-            },
-            {
-              extend: 'colvis',
-              className: 'btn bg-teal color-palette btn-flat',
-              text: 'Columns'
-            },
-
+            { extend: 'copy',   className: 'btn bg-teal color-palette btn-flat', exportOptions: { columns: [1,2,3,4,5,6,7,8,9,10] } },
+            { extend: 'excel',  className: 'btn bg-teal color-palette btn-flat', exportOptions: { columns: [1,2,3,4,5,6,7,8,9,10] } },
+            { extend: 'pdf',    className: 'btn bg-teal color-palette btn-flat', exportOptions: { columns: [1,2,3,4,5,6,7,8,9,10] } },
+            { extend: 'print',  className: 'btn bg-teal color-palette btn-flat', exportOptions: { columns: [1,2,3,4,5,6,7,8,9,10] } },
+            { extend: 'csv',    className: 'btn bg-teal color-palette btn-flat', exportOptions: { columns: [1,2,3,4,5,6,7,8,9,10] } },
+            { extend: 'colvis', className: 'btn bg-teal color-palette btn-flat', text: 'Columns' },
           ]
         },
-        /* FOR EXPORT BUTTONS END */
 
-        "pageLength": 50,
-        "processing": true,
-        "serverSide": true,
-        "order": [],
-        "responsive": true,
-        "deferRender": true,
-        "searchDelay": 600,
-
-        // REMOVE THESE THREE LINES - They're causing the pagination issue:
-        // "scrollY": 400,
-        // "scroller": true,
-
-        // ADD THESE FOR PROPER PAGINATION:
-        "paging": true,
-        "lengthMenu": [
-          [10, 25, 50, 100, 500, -1],
-          [10, 25, 50, 100, 500, "All"]
-        ],
-        "pagingType": "full_numbers", // This shows First, Previous, page numbers, Next, Last
+        pageLength   : 50,
+        processing   : true,
+        serverSide   : true,
+        order        : [],
+        responsive   : true,
+        deferRender  : true,
+        searchDelay  : 600,      // covers the built-in search box — fires once after 600ms
+        paging       : true,
+        lengthMenu   : [[10,25,50,100,500,-1],[10,25,50,100,500,"All"]],
+        pagingType   : "full_numbers",
 
         language: {
-          processing: '<div class="text-primary bg-primary" style="position: relative;z-index:100;overflow: visible;">Processing...</div>',
-          paginate: {
-            first: "First",
-            last: "Last",
-            next: "Next",
-            previous: "Previous"
-          },
-          info: "Showing _START_ to _END_ of _TOTAL_ entries",
-          infoEmpty: "Showing 0 to 0 of 0 entries",
-          infoFiltered: "(filtered from _MAX_ total entries)"
+          processing: '<div class="text-primary bg-primary" style="position:relative;z-index:100;overflow:visible;">Processing...</div>',
+          paginate: { first:"First", last:"Last", next:"Next", previous:"Previous" },
+          info         : "Showing _START_ to _END_ of _TOTAL_ entries",
+          infoEmpty    : "Showing 0 to 0 of 0 entries",
+          infoFiltered : "(filtered from _MAX_ total entries)"
         },
 
-        // Load data for the table's content from an Ajax source
-        "ajax": {
-          "url": "<?php echo site_url('sales/ajax_list') ?>",
-          "type": "POST",
-          "data": {
-            sales_from_date: $("#sales_from_date").val(),
-            sales_to_date: $("#sales_to_date").val(),
-            user_created_by: $("#user_created_by").val(),
-            customer_id: $("#search_customer_id").val(),
+        ajax: {
+          url  : "<?php echo site_url('sales/ajax_list') ?>",
+          type : "POST",
+          // Function form — re-reads filter values on EVERY request,
+          // not just at init time.
+          data : function(d) {
+            d.sales_from_date = $("#sales_from_date").val();
+            d.sales_to_date   = $("#sales_to_date").val();
+            d.user_created_by = $("#user_created_by").val();
+            d.customer_id     = $("#search_customer_id").val();
           },
-          "cache": true,
-          "timeout": 30000,
-          complete: function(data) {
+          cache   : false,
+          timeout : 30000,
+          complete: function() {
             $('.column_checkbox').iCheck({
               checkboxClass: 'icheckbox_square-orange',
-              radioClass: 'iradio_square-orange',
-              increaseArea: '10%'
+              radioClass   : 'iradio_square-orange',
+              increaseArea : '10%'
             });
             call_code();
           },
         },
 
-        "columnDefs": [{
-            "targets": [0, 11],
-            "orderable": false,
-          },
-          {
-            "targets": [0],
-            "className": "text-center",
-          },
+        columnDefs: [
+          { targets: [0, 11], orderable: false },
+          { targets: [0],     className: "text-center" },
         ],
 
-        "footerCallback": function(row, data, start, end, display) {
-          var api = this.api(),
-            data;
+        footerCallback: function(row, data, start, end, display) {
+          var api    = this.api();
           var intVal = function(i) {
-            return typeof i === 'string' ?
-              i.replace(/[\$,]/g, '') * 1 :
-              typeof i === 'number' ?
-              i : 0;
+            return typeof i === 'string' ? i.replace(/[\$,]/g,'') * 1
+                 : typeof i === 'number' ? i : 0;
           };
-          var total = api
-            .column(6, {
-              page: 'none'
-            })
-            .data()
-            .reduce(function(a, b) {
-              return intVal(a) + intVal(b);
-            }, 0);
-          var paid = api
-            .column(7, {
-              page: 'none'
-            })
-            .data()
-            .reduce(function(a, b) {
-              return intVal(a) + intVal(b);
-            }, 0);
-          var due = api
-            .column(8, {
-              page: 'none'
-            })
-            .data()
-            .reduce(function(a, b) {
-              return intVal(a) + intVal(b);
-            }, 0);
-
+          var total = api.column(6,{page:'none'}).data().reduce(function(a,b){return intVal(a)+intVal(b);},0);
+          var paid  = api.column(7,{page:'none'}).data().reduce(function(a,b){return intVal(a)+intVal(b);},0);
+          var due   = api.column(8,{page:'none'}).data().reduce(function(a,b){return intVal(a)+intVal(b);},0);
           $(api.column(6).footer()).html(app_number_format(total));
           $(api.column(7).footer()).html(app_number_format(paid));
           $(api.column(8).footer()).html(app_number_format(due));
         },
       });
 
-      new $.fn.dataTable.FixedHeader(table);
-    }
-    $(document).ready(function() {
-      load_datatable();
-    });
+      new $.fn.dataTable.FixedHeader(salesTable);
 
-    // OPTIMIZATION: Debounce filter changes to prevent excessive queries
-    var filterTimeout;
-    $("#sales_from_date,#sales_to_date,#user_created_by,#search_customer_id").on("change", function() {
-      clearTimeout(filterTimeout);
-      filterTimeout = setTimeout(function() {
-        $('#example2').DataTable().destroy();
-        load_datatable();
-      }, 500); // Wait 500ms after user stops changing filters
-    });
+      // ── FILTER DEBOUNCE ─────────────────────────────────────────
+      // Uses ajax.reload() — never destroys the table instance.
+      // One timer shared across all filters; resets on every interaction
+      // so only ONE request fires after the user stops changing things.
+      var filterTimeout;
+
+      function reloadWithDebounce(ms) {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(function() {
+          salesTable.ajax.reload(null, false); // false = keep current page position
+        }, ms || 500);
+      }
+
+      // Plain select — native change fires once per pick
+      $("#user_created_by").on("change", function() {
+        reloadWithDebounce(300);
+      });
+
+      // Select2 AJAX widget fires select2:select / select2:unselect,
+      // not the native change event
+      $("#search_customer_id").on("select2:select select2:unselect", function() {
+        reloadWithDebounce(300);
+      });
+
+      // Datepicker fires change after a calendar pick (one event, 300ms fine).
+      // Manual keyboard entry fires keyup per character — use 700ms so
+      // the user can finish typing the full date before a request goes out.
+      $("#sales_from_date, #sales_to_date").on("change", function() {
+        reloadWithDebounce(300);
+      }).on("keyup", function() {
+        reloadWithDebounce(700);
+      });
+
+    }); // ready
   </script>
   <script src="<?php echo $theme_link; ?>js/sales.js"></script>
   <script type="text/javascript">

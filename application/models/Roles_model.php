@@ -309,7 +309,14 @@ class Roles_model extends CI_Model {
 			'production_edit',
 			'production_delete',
 			'production_view',
-			'production_approve'
+			'production_approve',
+			'damage_add',
+			'damage_edit',
+			'damage_delete',
+			'damage_view',
+			'damage_approve',
+			'audit_log_view',
+			'audit_log_export',
 		)));
 
 

@@ -55,3 +55,8 @@ $route['translate_uri_dashes'] = FALSE;
 $route['license/renew'] = 'License/renew';
 $route['license/submit_transaction'] = 'License/submit_transaction';
 $route['license/thanks_image'] = 'License/thanks_image';
+
+$route['damage'] = 'damage';
+$route['damage/add'] = 'damage/add';
+$route['damage/save'] = 'damage/save';
+$route['damage/approve/(:num)'] = 'damage/approve/$1';
