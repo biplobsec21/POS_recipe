@@ -53,18 +53,7 @@ class Production extends MY_Controller
         // Generate a unique batch code
         $batch_code = 'PROD-' . date('YmdHis');
 
-        $production_batch_data = array(
-            'batch_code' => $batch_code,
-            'recipe_id' => $recipe_id,
-            'batch_quantity' => $batch_quantity,
-            'notes' => $notes,
-            'status' => 'Draft',
-            'warehouse_id' => 1,
-            'total_cost' => 0,
-            'cost_per_unit' => 0,
-            'created_by' => $this->session->userdata('inv_userid'),
-            'created_at' => date('Y-m-d H:i:s'),
-        );
+        $production_batch_data = $this->_build_production_batch_data($batch_code, $recipe_id, $batch_quantity, $notes);
 
         $production_batch_id = $this->Production_batch_model->insert($production_batch_data);
 
@@ -108,6 +97,11 @@ class Production extends MY_Controller
                 throw new Exception("No ingredients found for this recipe.");
             }
 
+            $batch_quantity = $this->_get_batch_quantity_value($production_batch);
+            if ($batch_quantity <= 0) {
+                throw new Exception("Invalid batch quantity.");
+            }
+
             // Check if there is enough stock for the ingredients
             $stock_issues = [];
             foreach ($recipe_items as $item) {
@@ -117,7 +111,7 @@ class Production extends MY_Controller
                     continue;
                 }
 
-                $required_qty = $item->quantity * $production_batch->batch_quantity;
+                $required_qty = $item->quantity * $batch_quantity;
 
                 if ($item_details->stock < $required_qty) {
                     $stock_issues[] = "Not enough stock for " . $item_details->item_name .
@@ -129,13 +123,29 @@ class Production extends MY_Controller
                 throw new Exception(implode("; ", $stock_issues));
             }
 
-            $total_cost = 0;
+            $recipe_item_costs = array_map(function ($item) {
+                $item_details = $this->Items_model->get_item_details_by_id($item->item_id);
+                if ($item_details) {
+                    $item->purchase_price = $item_details->purchase_price;
+                }
+                return $item;
+            }, $recipe_items);
+
+            $cost_breakdown = $this->_build_cost_breakdown_for_batch($recipe, $recipe_item_costs, $production_batch);
+
+            $total_cost = $cost_breakdown['total_cost'];
+
+            $current_output_cost = (float) ($output_item->purchase_price ?? 0);
+            $new_output_cost = (float) $cost_breakdown['cost_per_unit'];
+            $threshold_percent = (float) $this->input->post('cost_threshold_percent');
+            if ($threshold_percent > 0 && $this->_should_block_cost_increase($current_output_cost, $new_output_cost, $threshold_percent)) {
+                throw new Exception('Production cost increase exceeds the allowed threshold.');
+            }
 
             // Adjust stock levels and calculate cost - USING PROPER STOCK ENTRY METHOD
             foreach ($recipe_items as $item) {
                 $item_details = $this->Items_model->get_item_details_by_id($item->item_id);
-                $consumed_qty = $item->quantity * $production_batch->batch_quantity;
-                $total_cost += $item_details->purchase_price * $consumed_qty;
+                $consumed_qty = $item->quantity * $batch_quantity;
 
                 // Use the proper stock_entry method instead of direct update
                 $stock_result = $this->Items_model->stock_entry(
@@ -172,7 +182,7 @@ class Production extends MY_Controller
             }
 
             // Calculate cost per unit with validation
-            $total_output_qty = $recipe->yield_quantity * $production_batch->batch_quantity;
+            $total_output_qty = $cost_breakdown['total_output_qty'];
 
             if ($total_output_qty <= 0) {
                 throw new Exception("Invalid yield quantity. Cannot produce zero or negative quantity.");
@@ -182,7 +192,7 @@ class Production extends MY_Controller
                 throw new Exception("Invalid total cost calculated.");
             }
 
-            $cost_per_unit = $total_cost / $total_output_qty;
+            $cost_per_unit = $cost_breakdown['cost_per_unit'];
 
             // Increase output product stock - USING PROPER STOCK ENTRY METHOD
             $output_item = $this->Items_model->get_item_details_by_id($recipe->output_product_id);
@@ -238,7 +248,7 @@ class Production extends MY_Controller
                 throw new Exception("Failed to update production batch status.");
             }
 
-            // Update the cost price of the finished product
+            // Update the cost price of the finished product in place (do not create a new item)
             $this->db->set('purchase_price', $cost_per_unit);
             $this->db->where('id', $recipe->output_product_id);
             $this->db->update('db_items');
@@ -259,6 +269,88 @@ class Production extends MY_Controller
             $this->db->trans_rollback();
             echo $e->getMessage();
         }
+    }
+
+    protected function _build_cost_breakdown($recipe, $recipe_items, $batch_quantity)
+    {
+        if (!class_exists('Recipe_costing')) {
+            require_once APPPATH . 'libraries/Recipe_costing.php';
+        }
+
+        $calculator = new Recipe_costing();
+        return $calculator->calculate_batch_cost($recipe, $recipe_items, $batch_quantity);
+    }
+
+    protected function _build_cost_breakdown_for_batch($recipe, $recipe_items, $production_batch)
+    {
+        $batch_quantity = $this->_get_batch_quantity_value($production_batch);
+        return $this->_build_cost_breakdown($recipe, $recipe_items, $batch_quantity);
+    }
+
+    protected function _should_block_cost_increase($current_cost, $new_cost, $threshold_percent)
+    {
+        if ($current_cost <= 0 || $new_cost <= 0 || $threshold_percent <= 0) {
+            return false;
+        }
+
+        $increase_percent = (($new_cost - $current_cost) / $current_cost) * 100;
+        return $increase_percent > $threshold_percent;
+    }
+
+    private function _get_batch_quantity_value($production_batch)
+    {
+        if (is_object($production_batch) || is_array($production_batch)) {
+            foreach (array('batch_quantity', 'produced_quantity', 'quantity') as $field) {
+                if (isset($production_batch->$field) && $production_batch->$field !== '' && $production_batch->$field !== null) {
+                    return (float) $production_batch->$field;
+                }
+            }
+        }
+
+        return 0.0;
+    }
+
+    private function _build_production_batch_data($batch_code, $recipe_id, $batch_quantity, $notes, $is_update = false)
+    {
+        $data = array(
+            'recipe_id' => $recipe_id,
+            'notes' => $notes,
+        );
+
+        if (!$is_update) {
+            $data['batch_code'] = $batch_code;
+            $data['status'] = 'Draft';
+            $data['warehouse_id'] = 1;
+            $data['total_cost'] = 0;
+            $data['cost_per_unit'] = 0;
+            $data['created_by'] = $this->session->userdata('inv_userid');
+            $data['created_at'] = date('Y-m-d H:i:s');
+        }
+
+        if ($this->_production_column_exists('batch_quantity')) {
+            $data['batch_quantity'] = $batch_quantity;
+        } elseif ($this->_production_column_exists('produced_quantity')) {
+            $data['produced_quantity'] = $batch_quantity;
+        }
+
+        return $data;
+    }
+
+    private function _production_column_exists($column)
+    {
+        static $columns = null;
+
+        if ($columns === null) {
+            $columns = array();
+            if ($this->db->table_exists('production_batches')) {
+                $query = $this->db->query('SHOW COLUMNS FROM production_batches');
+                foreach ($query->result() as $row) {
+                    $columns[] = $row->Field;
+                }
+            }
+        }
+
+        return in_array($column, $columns, true);
     }
 
     public function get_recipe_details($recipe_id)
@@ -334,11 +426,7 @@ class Production extends MY_Controller
         $batch_quantity = $this->input->post('batch_quantity');
         $notes = $this->input->post('notes');
 
-        $production_batch_data = array(
-            'recipe_id' => $recipe_id,
-            'batch_quantity' => $batch_quantity,
-            'notes' => $notes,
-        );
+        $production_batch_data = $this->_build_production_batch_data(null, $recipe_id, $batch_quantity, $notes, true);
 
         $this->Production_batch_model->update($id, $production_batch_data);
 
@@ -418,9 +506,10 @@ class Production extends MY_Controller
         }
 
         $recipe_items = $this->Recipe_item_model->get_by_recipe_id($production_batch->recipe_id);
+        $batch_quantity = $this->_get_batch_quantity_value($production_batch);
 
         foreach ($recipe_items as $item) {
-            $consumed_qty = $item->quantity * $production_batch->batch_quantity;
+            $consumed_qty = $item->quantity * $batch_quantity;
 
             $stock_result = $this->Items_model->stock_entry(
                 date('Y-m-d H:i:s'),
@@ -440,7 +529,7 @@ class Production extends MY_Controller
             }
         }
 
-        $output_qty = $recipe->yield_quantity * $production_batch->batch_quantity;
+        $output_qty = $recipe->yield_quantity * $batch_quantity;
         $output_stock_result = $this->Items_model->stock_entry(
             date('Y-m-d H:i:s'),
             $recipe->output_product_id,
@@ -526,16 +615,27 @@ class Production extends MY_Controller
             $row[] = number_format($production->batch_quantity, 2);
 
             // Recipe Details Column
-            $recipe_details = '<strong>Output:</strong> ' . ($production->output_product_name ?? 'N/A') . '<br>';
-            $recipe_details .= '<strong>Yield per Batch:</strong> ' . number_format(($production->yield_quantity ?? 0), 2) . '<br>';
-            $recipe_details .= '<strong>Total Output:</strong> ' . number_format(($production->total_output_qty ?? 0), 2);
-            $row[] = $recipe_details;
+            $row[] = $this->_build_recipe_details_html($production);
+
+            // Notes Column
+            $notes_html = !empty($production->notes)
+                ? '<span title="' . htmlspecialchars($production->notes, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(substr($production->notes, 0, 80), ENT_QUOTES, 'UTF-8') . (strlen($production->notes) > 80 ? '...' : '') . '</span>'
+                : '<em>No notes</em>';
+            $row[] = $notes_html;
 
             // Cost Details Column
             $cost_details = '';
             if ($production->status == 'Approved') {
-                $cost_details .= '<strong>Total Cost:</strong> ' . ($this->data['currency'] ?? '') . number_format($production->total_cost, 2) . '<br>';
-                $cost_details .= '<strong>Cost/Unit:</strong> ' . ($this->data['currency'] ?? '') . number_format($production->cost_per_unit, 2);
+                $cost_breakdown = $this->_get_cost_breakdown_for_production($production);
+                $ingredient_cost = $cost_breakdown['ingredient_cost'];
+                $overhead_cost = $cost_breakdown['overhead_cost'];
+                $total_cost = $cost_breakdown['total_cost'];
+                $cost_per_unit = $cost_breakdown['cost_per_unit'];
+
+                $cost_details .= '<strong>Ingredient:</strong> ' . ($this->data['currency'] ?? '') . number_format($ingredient_cost, 2) . '<br>';
+                $cost_details .= '<strong>Other:</strong> ' . ($this->data['currency'] ?? '') . number_format($overhead_cost, 2) . '<br>';
+                $cost_details .= '<strong>Total:</strong> ' . ($this->data['currency'] ?? '') . number_format($total_cost, 2) . '<br>';
+                $cost_details .= '<strong>Cost/Unit:</strong> ' . ($this->data['currency'] ?? '') . number_format($cost_per_unit, 2);
             } else {
                 $cost_details .= '<em>Not calculated</em>';
             }
@@ -578,6 +678,51 @@ class Production extends MY_Controller
 
         echo json_encode($output);
     }
+    private function _get_cost_breakdown_for_production($production)
+    {
+        $recipe = $this->Recipe_model->get_by_id($production->recipe_id);
+        if (!$recipe) {
+            return array(
+                'ingredient_cost' => 0.0,
+                'overhead_cost' => 0.0,
+                'total_cost' => 0.0,
+                'cost_per_unit' => 0.0,
+            );
+        }
+
+        $recipe_items = $this->Recipe_item_model->get_by_recipe_id($production->recipe_id);
+        $recipe_item_costs = array_map(function ($item) {
+            $item_details = $this->Items_model->get_item_details_by_id($item->item_id);
+            if ($item_details) {
+                $item->purchase_price = $item_details->purchase_price;
+            }
+            return $item;
+        }, $recipe_items);
+
+        return $this->_build_cost_breakdown_for_batch($recipe, $recipe_item_costs, $production);
+    }
+
+    private function _build_recipe_details_html($production)
+    {
+        $recipe_details = '<strong>Output:</strong> ' . ($production->output_product_name ?? 'N/A') . '<br>';
+        $recipe_details .= '<strong>Yield per Batch:</strong> ' . number_format(($production->yield_quantity ?? 0), 2) . '<br>';
+        $recipe_details .= '<strong>Total Output:</strong> ' . number_format(($production->total_output_qty ?? 0), 2) . '<br>';
+
+        $recipe_items = $this->Recipe_item_model->get_by_recipe_id($production->recipe_id);
+        if (!empty($recipe_items)) {
+            $recipe_details .= '<strong>Ingredients:</strong><br>';
+            foreach ($recipe_items as $item) {
+                $item_details = $this->Items_model->get_item_details_by_id($item->item_id);
+                $item_name = $item_details ? $item_details->item_name : 'Unknown';
+                $required_qty = isset($item->quantity) ? number_format((float) $item->quantity, 2) : '0.00';
+                $total_required = isset($item->quantity, $production->batch_quantity) ? number_format((float) $item->quantity * (float) $production->batch_quantity, 2) : '0.00';
+                $recipe_details .= '&nbsp;&nbsp;- ' . htmlspecialchars($item_name, ENT_QUOTES, 'UTF-8') . ' (' . $required_qty . ' per batch, ' . $total_required . ' total)<br>';
+            }
+        }
+
+        return $recipe_details;
+    }
+
     private function _get_username($user_id)
     {
         if (empty($user_id)) {
@@ -604,7 +749,30 @@ class Production extends MY_Controller
         }
 
         // Get recipe items
-        $data['recipe_items'] = $this->Recipe_item_model->get_by_recipe_id($production_batch->recipe_id);
+        $recipe_items = $this->Recipe_item_model->get_by_recipe_id($production_batch->recipe_id);
+        $data['recipe_items'] = $recipe_items;
+
+        $recipe = $this->Recipe_model->get_by_id($production_batch->recipe_id);
+        $data['recipe'] = $recipe;
+
+        $cost_breakdown = null;
+        if ($recipe) {
+            $recipe_item_costs = array_map(function ($item) {
+                $item_details = $this->Items_model->get_item_details_by_id($item->item_id);
+                if ($item_details) {
+                    $item->purchase_price = $item_details->purchase_price;
+                }
+                return $item;
+            }, $recipe_items);
+
+            $cost_breakdown = $this->_build_cost_breakdown_for_batch(
+                $recipe,
+                $recipe_item_costs,
+                $production_batch
+            );
+        }
+
+        $data['cost_breakdown'] = $cost_breakdown;
 
         // Get inventory movements for this batch
         $data['inventory_movements'] = $this->Inventory_movements_model->get_by_reference('PRODUCTION_CONSUME', $id);

@@ -1,5 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
+$currency = isset($this->data['currency']) ? $this->data['currency'] : '';
 ?>
 <!DOCTYPE html>
 <html>
@@ -190,6 +191,44 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                 <?php endif; ?>
                             </div>
                         </div>
+
+                        <?php if (!empty($recipe) || !empty($cost_breakdown)): ?>
+                            <div class="box box-default">
+                                <div class="box-header with-border">
+                                    <h3 class="box-title">Cost Breakdown</h3>
+                                </div>
+                                <div class="box-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered">
+                                            <tr>
+                                                <th width="30%">Ingredient Cost</th>
+                                                <td><?= $currency . number_format(isset($cost_breakdown['ingredient_cost']) ? $cost_breakdown['ingredient_cost'] : 0, 2); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Other Cost</th>
+                                                <td><?= $currency . number_format(isset($cost_breakdown['overhead_cost']) ? $cost_breakdown['overhead_cost'] : 0, 2); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Cost Type</th>
+                                                <td><?= isset($recipe->overhead_cost_type) && $recipe->overhead_cost_type === 'per_unit' ? 'Per Unit' : 'Fixed'; ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Cost Value</th>
+                                                <td><?= $currency . number_format(isset($recipe->overhead_cost) ? $recipe->overhead_cost : 0, 2); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Total Cost</th>
+                                                <td class="cost-highlight"><?= $currency . number_format(isset($cost_breakdown['total_cost']) ? $cost_breakdown['total_cost'] : 0, 2); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th>Cost Per Unit</th>
+                                                <td class="cost-highlight"><?= $currency . number_format(isset($cost_breakdown['cost_per_unit']) ? $cost_breakdown['cost_per_unit'] : 0, 2); ?></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- Recipe Ingredients Section -->
                         <div class="box box-info">

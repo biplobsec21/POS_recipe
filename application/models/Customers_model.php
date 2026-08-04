@@ -867,7 +867,7 @@ class Customers_model extends CI_Model
 	{
 		$q = '';
 
-		$this->db->select("id, customer_name, mobile")->from('db_customers');
+		$this->db->select("id, customer_name, mobile")->from('db_customers')->where("status", 1);
 
 		if (!empty($id)) {
 			$this->db->where("id", $id);

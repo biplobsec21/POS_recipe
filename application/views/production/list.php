@@ -18,6 +18,14 @@ defined('BASEPATH') or exit('No direct script access allowed');
             line-height: 1.4;
         }
 
+        .notes-cell {
+            font-size: 12px;
+            line-height: 1.4;
+            max-width: 240px;
+            white-space: normal;
+            word-break: break-word;
+        }
+
         .status-label {
             font-size: 12px;
             padding: 4px 8px;
@@ -76,6 +84,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                             <th>Recipe Name</th>
                                             <th>Batch Qty</th>
                                             <th>Recipe Details</th>
+                                            <th>Notes</th>
                                             <th>Cost Details</th>
                                             <th>Production Date</th>
                                             <th>Status</th>
@@ -204,8 +213,12 @@ defined('BASEPATH') or exit('No direct script access allowed');
                         "className": "text-center",
                     },
                     {
-                        "targets": [4, 5],
+                        "targets": [4, 6],
                         "className": "recipe-details",
+                    },
+                    {
+                        "targets": [5],
+                        "className": "notes-cell",
                     },
                     {
                         "targets": [7],

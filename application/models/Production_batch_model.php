@@ -26,7 +26,7 @@ class Production_batch_model extends CI_Model
     // Get production batch by ID
     public function get_by_id($id)
     {
-        $this->db->select('pb.*, r.recipe_name, r.yield_quantity, r.output_product_id, i.item_name as output_product_name');
+        $this->db->select('pb.*, r.recipe_name, r.yield_quantity, r.output_product_id, r.overhead_cost, r.overhead_cost_type, i.item_name as output_product_name');
         $this->db->from('production_batches as pb');
         $this->db->join('recipes as r', 'r.id = pb.recipe_id', 'left');
         $this->db->join('db_items as i', 'i.id = r.output_product_id', 'left');

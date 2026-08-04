@@ -26,6 +26,15 @@ class Migration_Create_recipe_production_tables extends CI_Migration {
                 'type' => 'DECIMAL',
                 'constraint' => '10,4',
             ),
+            'overhead_cost' => array(
+                'type' => 'DECIMAL',
+                'constraint' => '10,4',
+                'default' => 0,
+            ),
+            'overhead_cost_type' => array(
+                'type' => 'ENUM("fixed","per_unit")',
+                'default' => 'fixed',
+            ),
             'notes' => array(
                 'type' => 'TEXT',
                 'null' => TRUE,

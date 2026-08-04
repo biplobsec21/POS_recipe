@@ -92,6 +92,23 @@
                 </div>
 
                 <div class="form-group">
+                  <label for="overhead_cost" class="col-sm-2 control-label">Other Cost</label>
+                  <div class="col-sm-4">
+                    <input type="text" class="form-control only_currency" id="overhead_cost" name="overhead_cost" value="0.00">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="overhead_cost_type" class="col-sm-2 control-label">Cost Type</label>
+                  <div class="col-sm-4">
+                    <select class="form-control" id="overhead_cost_type" name="overhead_cost_type">
+                      <option value="fixed">Fixed</option>
+                      <option value="per_unit">Per Unit</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
                   <label for="notes" class="col-sm-2 control-label"><?= $this->lang->line('notes'); ?></label>
                   <div class="col-sm-4">
                     <textarea class="form-control" id="notes" name="notes" placeholder=""></textarea>

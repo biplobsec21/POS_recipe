@@ -61,6 +61,8 @@ class Recipe extends MY_Controller
             'recipe_name' => $this->input->post('recipe_name'),
             'output_product_id' => $this->input->post('output_product_id'),
             'yield_quantity' => $this->input->post('yield_quantity'),
+            'overhead_cost' => $this->input->post('overhead_cost') ?: 0,
+            'overhead_cost_type' => $this->input->post('overhead_cost_type') ?: 'fixed',
             'notes' => $this->input->post('notes'),
             'created_by' => $this->session->userdata('inv_userid'),
             'created_at' => date('Y-m-d H:i:s'),
@@ -126,6 +128,8 @@ class Recipe extends MY_Controller
             'recipe_name' => $this->input->post('recipe_name'),
             'output_product_id' => $this->input->post('output_product_id'),
             'yield_quantity' => $this->input->post('yield_quantity'),
+            'overhead_cost' => $this->input->post('overhead_cost') ?: 0,
+            'overhead_cost_type' => $this->input->post('overhead_cost_type') ?: 'fixed',
             'notes' => $this->input->post('notes'),
         );
 
