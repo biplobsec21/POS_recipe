@@ -76,7 +76,7 @@ class Suppliers extends MY_Controller
 
 			$row[] = ($suppliers->purchase_return_due == null) ? (0) : app_number_format($suppliers->purchase_return_due);
 
-			if ($suppliers->status === 1) {
+			if ((int) $suppliers->status === 1) {
 				$str = "<span onclick='update_status(" . $suppliers->id . ",0)' id='span_" . $suppliers->id . "'  class='label label-success' style='cursor:pointer'>Active </span>";
 			} else {
 				$str = "<span onclick='update_status(" . $suppliers->id . ",1)' id='span_" . $suppliers->id . "'  class='label label-danger' style='cursor:pointer'> Inactive </span>";
