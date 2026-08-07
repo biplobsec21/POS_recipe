@@ -6,8 +6,8 @@ class Suppliers_model extends CI_Model
 
   //Datatable start
   var $table = 'db_suppliers as a';
-  var $column_order = array('a.supplier_code', 'a.id', 'a.supplier_name', 'a.mobile', 'a.email', 'a.opening_balance', 'a.purchase_due', 'a.purchase_return_due', 'a.status'); //set column field database for datatable orderable
-  var $column_search = array('a.supplier_code', 'a.id', 'a.supplier_name', 'a.mobile', 'a.email', 'a.opening_balance', 'a.purchase_due', 'a.purchase_return_due', 'a.status'); //set column field database for datatable searchable 
+  var $column_order = array('a.supplier_code', 'a.id', 'a.supplier_name', 'a.mobile', 'a.email', 'p.total_purchase', 'p.total_paid', 'a.purchase_due', 'a.purchase_return_due', 'a.status'); //set column field database for datatable orderable
+  var $column_search = array('a.supplier_code', 'a.id', 'a.supplier_name', 'a.mobile', 'a.email', 'p.total_purchase', 'p.total_paid', 'a.opening_balance', 'a.purchase_due', 'a.purchase_return_due', 'a.status'); //set column field database for datatable searchable 
   var $order = array('a.id' => 'desc'); // default order 
 
   public function __construct()
@@ -19,6 +19,9 @@ class Suppliers_model extends CI_Model
   {
     $this->db->select($this->column_order);
     $this->db->from($this->table);
+    // live totals from received purchases (Total Purchase / Paid)
+    $purchase_sub = "(SELECT supplier_id, COALESCE(SUM(grand_total), 0) AS total_purchase, COALESCE(SUM(paid_amount), 0) AS total_paid FROM db_purchase WHERE purchase_status = 'Received' GROUP BY supplier_id) p";
+    $this->db->join($purchase_sub, 'p.supplier_id = a.id', 'left');
 
     $i = 0;
 

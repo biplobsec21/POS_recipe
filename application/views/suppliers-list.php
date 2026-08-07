@@ -61,6 +61,8 @@
                   <th><?= $this->lang->line('supplier_name'); ?></th>
                   <th><?= $this->lang->line('mobile'); ?></th>
                   <th><?= $this->lang->line('email'); ?></th>
+                  <th><?= $this->lang->line('total_purchase'); ?></th>
+                  <th><?= $this->lang->line('paid'); ?></th>
                   <th><?= $this->lang->line('purchase_due'); ?></th>
                   <th><?= $this->lang->line('purchase_return_due'); ?></th>
                   <th><?= $this->lang->line('status'); ?></th>
@@ -75,8 +77,10 @@
                       <th colspan="5" style="text-align:right">Total</th>
                       <th></th>
                       <th></th>
-                      <th></th><!-- 7 -->
+                      <th></th>
                       <th></th><!-- 8 -->
+                      <th></th><!-- 9 -->
+                      <th></th><!-- 10 -->
                   </tr>
               </tfoot>
               </table>
@@ -131,11 +135,11 @@ $(document).ready(function() {
                     multi_delete();
                 }
             },
-            { extend: 'copy', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7]} },
-            { extend: 'excel', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7]} },
-            { extend: 'pdf', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7]} },
-            { extend: 'print', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7]} },
-            { extend: 'csv', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7]} },
+            { extend: 'copy', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7,8,9]} },
+            { extend: 'excel', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7,8,9]} },
+            { extend: 'pdf', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7,8,9]} },
+            { extend: 'print', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7,8,9]} },
+            { extend: 'csv', className: 'btn bg-teal color-palette btn-flat',exportOptions: { columns: [1,2,3,4,5,6,7,8,9]} },
             { extend: 'colvis', className: 'btn bg-teal color-palette btn-flat',text:'Columns' },  
 
             ]
@@ -170,7 +174,7 @@ $(document).ready(function() {
         //Set column definition initialisation properties.
         "columnDefs": [
         { 
-            "targets": [ 0,8 ], //first column / numbering column
+            "targets": [ 0,10 ], //first column / numbering column
             "orderable": false, //set not orderable
         },
         {
@@ -190,21 +194,35 @@ $(document).ready(function() {
                         i : 0;
             };
           
-            var purchase_due = api
+            var total_purchase = api
                 .column( 5, { page: 'none'} )
                 .data()
                 .reduce( function (a, b) {
                     return intVal(a) + intVal(b);
                 }, 0 );
-            var purchase_return_due = api
+            var total_paid = api
                 .column( 6, { page: 'none'} )
                 .data()
                 .reduce( function (a, b) {
                     return intVal(a) + intVal(b);
                 }, 0 );
+            var purchase_due = api
+                .column( 7, { page: 'none'} )
+                .data()
+                .reduce( function (a, b) {
+                    return intVal(a) + intVal(b);
+                }, 0 );
+            var purchase_return_due = api
+                .column( 8, { page: 'none'} )
+                .data()
+                .reduce( function (a, b) {
+                    return intVal(a) + intVal(b);
+                }, 0 );
             //$( api.column( 0 ).footer() ).html('Total');
-            $( api.column( 5 ).footer() ).html(app_number_format(purchase_due));
-            $( api.column( 6 ).footer() ).html(app_number_format(purchase_return_due));
+            $( api.column( 5 ).footer() ).html(app_number_format(total_purchase));
+            $( api.column( 6 ).footer() ).html(app_number_format(total_paid));
+            $( api.column( 7 ).footer() ).html(app_number_format(purchase_due));
+            $( api.column( 8 ).footer() ).html(app_number_format(purchase_return_due));
         },
         /*End Footer Total*/
     });

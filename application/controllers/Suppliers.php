@@ -72,10 +72,10 @@ class Suppliers extends MY_Controller
 			$row[] = $suppliers->supplier_name;
 			$row[] = $suppliers->mobile;
 			$row[] = $suppliers->email;
-			$row[] = (!empty($suppliers->purchase_due) && $suppliers->purchase_due != 0) ? app_number_format($suppliers->purchase_due) : (0);
-
-			$row[] = ($suppliers->purchase_return_due == null) ? (0) : app_number_format($suppliers->purchase_return_due);
-
+      		$row[] = (!empty($suppliers->total_purchase) && $suppliers->total_purchase != 0) ? app_number_format($suppliers->total_purchase) : (0);
+      		$row[] = (!empty($suppliers->total_paid) && $suppliers->total_paid != 0) ? app_number_format($suppliers->total_paid) : (0);
+      		$row[] = (!empty($suppliers->purchase_due) && $suppliers->purchase_due != 0) ? app_number_format($suppliers->purchase_due) : (0);
+      		$row[] = ($suppliers->purchase_return_due == null) ? (0) : app_number_format($suppliers->purchase_return_due);
 			if ((int) $suppliers->status === 1) {
 				$str = "<span onclick='update_status(" . $suppliers->id . ",0)' id='span_" . $suppliers->id . "'  class='label label-success' style='cursor:pointer'>Active </span>";
 			} else {
