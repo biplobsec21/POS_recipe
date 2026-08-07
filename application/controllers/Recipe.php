@@ -230,10 +230,23 @@ class Recipe extends MY_Controller
             $row[] = $this->_get_username(isset($recipe->created_by) ? $recipe->created_by : null);
             $row[] = isset($recipe->created_at) ? show_date($recipe->created_at) : '';
 
+            // costing column: multi-line breakdown of costs
+            $costs = $this->_get_recipe_costs($recipe);
+            $overhead_type = (isset($recipe->overhead_cost_type) && $recipe->overhead_cost_type === 'per_unit') ? 'Per Unit' : 'Fixed';
+            $costing = '';
+            $costing .= '<b>' . $this->lang->line('total_ingredients_cost') . ' :</b> ' . $this->currency(number_format($costs['ingredient_cost'], 2)) . '<br>';
+            $costing .= '<b>' . $this->lang->line('overhead_cost') . ' (' . $overhead_type . ') :</b> ' . $this->currency(number_format($costs['other_cost'], 2)) . '<br>';
+            $costing .= '<b>' . $this->lang->line('total_cost') . ' :</b> ' . $this->currency(number_format($costs['total_cost'], 2)) . '<br>';
+            $costing .= '<b>' . $this->lang->line('cost_per_unit') . ' :</b> ' . $this->currency(number_format($costs['cost_per_unit'], 2));
+            $row[] = $costing;
+
             // action buttons
             $buttons = '';
+            if ($this->permissions('recipe_view')) {
+                $buttons .= '<a class="btn btn-info btn-sm" target="_blank" href="' . base_url('recipe/print_receipt/' . $recipe->id) . '" title="Print Receipt"><i class="fa fa-print"></i></a>';
+            }
             if ($this->permissions('recipe_edit')) {
-                $buttons .= '<a class="btn btn-primary btn-sm" href="' . base_url('recipe/edit/' . $recipe->id) . '" title="Edit"><i class="fa fa-edit"></i></a>';
+                $buttons .= ' <a class="btn btn-primary btn-sm" href="' . base_url('recipe/edit/' . $recipe->id) . '" title="Edit"><i class="fa fa-edit"></i></a>';
             }
             if ($this->permissions('recipe_delete')) {
                 $buttons .= ' <a class="btn btn-danger btn-sm" href="javascript:void(0)" title="Delete" onclick="delete_recipe(' . $recipe->id . ')"><i class="fa fa-trash"></i></a>';
@@ -254,6 +267,39 @@ class Recipe extends MY_Controller
     }
 
     /**
+     * Compute ingredient cost, other (overhead) cost and total cost for a recipe.
+     * Mirrors the cost logic used in the printable receipt.
+     */
+    private function _get_recipe_costs($recipe)
+    {
+        $ingredient_cost = (float) $this->db->select('COALESCE(SUM(ri.quantity * i.purchase_price), 0) AS total')
+            ->from('recipe_items ri')
+            ->join('db_items i', 'i.id = ri.item_id', 'left')
+            ->where('ri.recipe_id', $recipe->id)
+            ->get()
+            ->row()
+            ->total;
+
+        $overhead = (float) $recipe->overhead_cost;
+        if (isset($recipe->overhead_cost_type) && $recipe->overhead_cost_type === 'per_unit') {
+            $other_cost = $overhead * (float) $recipe->yield_quantity;
+        } else {
+            $other_cost = $overhead;
+        }
+
+        $total_cost = $ingredient_cost + $other_cost;
+        $yield = (float) $recipe->yield_quantity;
+        $cost_per_unit = ($yield > 0) ? ($total_cost / $yield) : 0;
+
+        return array(
+            'ingredient_cost' => $ingredient_cost,
+            'other_cost'      => $other_cost,
+            'total_cost'      => $total_cost,
+            'cost_per_unit'   => $cost_per_unit,
+        );
+    }
+
+    /**
      * Safe wrapper to obtain username. Avoids fatal if login/users model is not available.
      */
     private function _get_username($user_id)
@@ -269,6 +315,19 @@ class Recipe extends MY_Controller
 
         return 'Unknown';
     }
+    public function print_receipt($recipe_id)
+    {
+        if (!$this->permissions('recipe_view')) {
+            $this->show_access_denied_page();
+        }
+
+        $data = $this->data;
+        $data['page_title'] = $this->lang->line('recipe_name');
+        $data['recipe_id'] = (int) $recipe_id;
+
+        $this->load->view('recipe/print_receipt', $data);
+    }
+
     public function get_json_items_details()
     {
         // Check if it's an AJAX request

@@ -62,6 +62,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
                       <th><?= $this->lang->line('notes'); ?></th>
                       <th><?= $this->lang->line('created_by'); ?></th>
                       <th><?= $this->lang->line('created_at'); ?></th>
+                      <th><?= $this->lang->line('costing'); ?></th>
                       <th><?= $this->lang->line('action'); ?></th>
                     </tr>
                   </thead>
@@ -114,35 +115,35 @@ defined('BASEPATH') or exit('No direct script access allowed');
               extend: 'copy',
               className: 'btn bg-teal color-palette btn-flat',
               exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6]
+                columns: [1, 2, 3, 4, 5, 6, 7]
               }
             },
             {
               extend: 'excel',
               className: 'btn bg-teal color-palette btn-flat',
               exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6]
+                columns: [1, 2, 3, 4, 5, 6, 7]
               }
             },
             {
               extend: 'pdf',
               className: 'btn bg-teal color-palette btn-flat',
               exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6]
+                columns: [1, 2, 3, 4, 5, 6, 7]
               }
             },
             {
               extend: 'print',
               className: 'btn bg-teal color-palette btn-flat',
               exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6]
+                columns: [1, 2, 3, 4, 5, 6, 7]
               }
             },
             {
               extend: 'csv',
               className: 'btn bg-teal color-palette btn-flat',
               exportOptions: {
-                columns: [1, 2, 3, 4, 5, 6]
+                columns: [1, 2, 3, 4, 5, 6, 7]
               }
             },
             {
@@ -180,7 +181,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
         //Set column definition initialisation properties.
         "columnDefs": [{
-            "targets": [0, 7], //first column / numbering column
+            "targets": [0, 8], //first column / numbering column
             "orderable": false, //set not orderable
           },
           {
