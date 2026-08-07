@@ -364,7 +364,7 @@ class Sales_model extends CI_Model
 				$discount_type 		= $this->xss_html_filter(trim($_REQUEST['item_discount_type_' . $i]));
 				$discount_input 	= $this->xss_html_filter(trim($_REQUEST['item_discount_input_' . $i]));
 				$discount_amt	    = $this->xss_html_filter(trim($_REQUEST['td_data_' . $i . '_8'])); //Amount
-				$purchase_price	    = $this->xss_html_filter(trim($_REQUEST['pur_price_' . $i]));
+				$purchase_price	    = get_item_fifo_purchase_price($item_id, $sales_qty);
 
 				$item_details = get_item_details($item_id);
 				$current_stock_of_item = $item_details->stock;

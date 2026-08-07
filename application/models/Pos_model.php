@@ -284,7 +284,7 @@ class Pos_model extends CI_Model
 				$tax_value = $this->xss_html_filter(trim($_REQUEST['tr_tax_value_' . $i])); //%
 				$total_cost = $this->xss_html_filter(trim($_REQUEST['td_data_' . $i . '_4']));
 				$description = $this->xss_html_filter(trim($_REQUEST['description_' . $i]));
-				$purchase_price = $this->xss_html_filter(trim($_REQUEST['purchase_price_' . $i]));
+				$purchase_price = get_item_fifo_purchase_price($item_id, $sales_qty);
 
 				$discount_type = $this->xss_html_filter(trim($_REQUEST['item_discount_type_' . $i]));
 				$discount_input = $this->xss_html_filter(trim($_REQUEST['item_discount_input_' . $i]));

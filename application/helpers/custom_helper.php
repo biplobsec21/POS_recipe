@@ -216,6 +216,102 @@ function get_item_details($item_id)
     ->where("id=", $item_id)->get()->row();
 }
 
+function get_item_net_sold_qty($item_id)
+{
+  $CI = &get_instance();
+  $item_id = (int) $item_id;
+  if ($item_id <= 0) {
+    return 0;
+  }
+
+  $sold_qty = (float) $CI->db->select('COALESCE(SUM(sales_qty),0) as qty')
+    ->from('db_salesitems')
+    ->where('item_id', $item_id)
+    ->where('sales_status', 'Final')
+    ->get()
+    ->row()
+    ->qty;
+
+  $return_qty = (float) $CI->db->select('COALESCE(SUM(return_qty),0) as qty')
+    ->from('db_salesitemsreturn')
+    ->where('item_id', $item_id)
+    ->get()
+    ->row()
+    ->qty;
+
+  $net_qty = $sold_qty - $return_qty;
+  return ($net_qty < 0) ? 0 : $net_qty;
+}
+
+function get_item_fifo_purchase_price($item_id, $qty)
+{
+  $CI = &get_instance();
+  $item_id = (int) $item_id;
+  $qty = (float) $qty;
+  if ($item_id <= 0 || $qty <= 0) {
+    return 0;
+  }
+
+  $purchase_items = $CI->db
+    ->select('id,purchase_qty,price_per_unit,purchase_id')
+    ->from('db_purchaseitems')
+    ->where('item_id', $item_id)
+    ->where('purchase_status', 'Received')
+    ->order_by('purchase_id', 'ASC')
+    ->order_by('id', 'ASC')
+    ->get()
+    ->result();
+
+  if (empty($purchase_items)) {
+    $item = $CI->db->select('purchase_price')->from('db_items')->where('id', $item_id)->get()->row();
+    return ($item) ? (float) $item->purchase_price : 0;
+  }
+
+  // get_item_net_sold_qty() already includes rows of the same invoice inserted
+  // earlier in the current transaction (same connection sees its own writes),
+  // so each line item naturally skips the units already allocated to previous
+  // rows of this invoice. No extra in-request tracker is needed.
+  $sold_qty = get_item_net_sold_qty($item_id);
+
+  $remaining_to_skip = $sold_qty;
+  $remaining = $qty;
+  $cost_total = 0.0;
+
+  foreach ($purchase_items as $lot) {
+    $lot_qty = (float) $lot->purchase_qty;
+    if ($lot_qty <= 0) {
+      continue;
+    }
+
+    $consumed_from_lot = 0.0;
+    if ($remaining_to_skip > 0) {
+      $consumed_from_lot = min($lot_qty, $remaining_to_skip);
+      $remaining_to_skip -= $consumed_from_lot;
+    }
+
+    $lot_available = max(0.0, $lot_qty - $consumed_from_lot);
+    if ($lot_available <= 0) {
+      continue;
+    }
+
+    $take = min($lot_available, $remaining);
+    $cost_total += $take * (float) $lot->price_per_unit;
+    $remaining -= $take;
+
+    if ($remaining <= 0) {
+      break;
+    }
+  }
+
+  if ($remaining > 0) {
+    $item = $CI->db->select('purchase_price')->from('db_items')->where('id', $item_id)->get()->row();
+    $fallback_cost = ($item) ? (float) $item->purchase_price : 0;
+    $cost_total += $remaining * $fallback_cost;
+  }
+
+  return ($qty > 0) ? round($cost_total / $qty, 2) : 0;
+}
+
 function get_country($country_id = '')
 {
   $CI = &get_instance();
