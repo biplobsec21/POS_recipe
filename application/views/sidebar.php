@@ -345,6 +345,9 @@ $CI = &get_instance();
             <?php if ($CI->permissions('recipe_view')) { ?>
               <li class="recipe-list-active-li"><a href="<?php echo $base_url; ?>recipe"><i class="fa fa-list "></i> <span><?= $this->lang->line('recipes_list'); ?></span></a></li>
             <?php } ?>
+            <?php if ($CI->permissions('recipe_add')) { ?>
+              <li class="recipe-active-li"><a href="<?php echo $base_url; ?>import/recipes"><i class="fa fa-arrow-circle-o-left "></i> <span>Import Recipes</span></a></li>
+            <?php } ?>
             <!-- Production Batch Management -->
             <?php if ($CI->permissions('production_add')) { ?>
               <li class="production-active-li"><a href="<?php echo $base_url; ?>production/add"><i class="fa fa-plus-square-o "></i> <span>Add Production</span></a></li>

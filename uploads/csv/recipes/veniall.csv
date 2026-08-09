@@ -1,0 +1,13 @@
+recipe_name,output_product,yield_quantity,overhead_cost,overhead_cost_type,notes,ingredient_item,ingredient_quantity,ingredient_unit
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,1 lbs venilla cake,IT0013,0.125,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0042,2.5,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0063,0.0125,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0061,0.0025,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0095,1,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0015,0.25,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0016,0.25,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0037,0.005,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0092,0.01875,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0023,1,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0017,1,
+Recipe of Vanila Cake 1bs,IT0216,1,,fixed,,IT0012,1,

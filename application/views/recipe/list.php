@@ -43,8 +43,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 <h3 class="box-title"><?= $page_title; ?></h3>
                 <?php if ($CI->permissions('recipe_add')) { ?>
                   <div class="box-tools">
-                    <a class="btn btn-block btn-info" href="<?= base_url('recipe/add'); ?>">
+                    <a class="btn btn-info" style="margin-right:5px;" href="<?= base_url('recipe/add'); ?>">
                       <i class="fa fa-plus"></i> <?= $this->lang->line('add_recipe'); ?></a>
+                    <a class="btn btn-success" href="<?= base_url('import/recipes'); ?>">
+                      <i class="fa fa-upload"></i> <?= $this->lang->line('import_recipes'); ?></a>
                   </div>
                 <?php } ?>
               </div>

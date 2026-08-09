@@ -1,0 +1,10 @@
+recipe_name,output_product,yield_quantity,overhead_cost,overhead_cost_type,notes,ingredient_item,ingredient_quantity,ingredient_unit
+Brawoni Recepe 46 PCS,Brawoni 46 PCS,46,110,fixed,Example recipe - replace with your own items,moyda,1,KG
+Brawoni Recepe 46 PCS,Brawoni 46 PCS,46,110,fixed,Example recipe - replace with your own items,Sugar,1.2,KG
+Brawoni Recepe 46 PCS,Brawoni 46 PCS,46,110,fixed,Example recipe - replace with your own items,Dim / egg,24,PCS
+Brawoni Recepe 46 PCS,Brawoni 46 PCS,46,110,fixed,Example recipe - replace with your own items,Sp bater,0.6,KG
+Fruit Cake-10,Fruit Cake 10 PCS,10,112,fixed,,moyda,2,KG
+Fruit Cake-10,Fruit Cake 10 PCS,10,112,fixed,,IT0002,1.5,
+Fruit Cake-10,Fruit Cake 10 PCS,10,112,fixed,,Dim / egg,6,PCS
+Plain Cake-9,Plain Cake 9 PCS,9,115,per_unit,,moyda,1.5,KG
+Plain Cake-9,Plain Cake 9 PCS,9,115,per_unit,,Sugar,0.8,KG

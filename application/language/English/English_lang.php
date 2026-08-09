@@ -419,6 +419,7 @@ $lang['required']    =        'Required';
 $lang['optional']    =        'Optional';
 $lang['download_example_format']    =        'Download Example Format';
 $lang['import_suppliers']    =        'Import Suppliers';
+$lang['import_recipes']    =        'Import Recipes';
 $lang['opening_balance']    =        'Opening Balance';
 $lang['opening_balance_due']    =        'Opening Balance Due';
 $lang['opening_balance_payments']    =        'Opening Balance Payments';

@@ -559,4 +559,217 @@ class Import extends MY_Controller
             return $this->db->insert_id();
         }
     }
+
+    /* ============================ RECIPE IMPORT ============================ */
+
+    public function recipes()
+    {
+        $this->permission_check('recipe_add');
+        $data = $this->data;
+        $data['page_title'] = 'Import Recipes';
+        $this->load->view('import/import_recipes', $data);
+    }
+
+    /**
+     * Import recipes from a CSV file.
+     *
+     * CSV layout (one row per INGREDIENT, recipe details repeated on each row):
+     *   recipe_name, output_product, yield_quantity, overhead_cost,
+     *   overhead_cost_type, notes, ingredient_item, ingredient_quantity, ingredient_unit
+     *
+     * Rows sharing the same recipe_name are grouped into a single recipe.
+     * output_product / ingredient_item may be the item NAME or the item CODE.
+     */
+    public function import_recipes_csv()
+    {
+        $this->permission_check('recipe_add');
+
+        if (!isset($_FILES['import_file']) || $_FILES['import_file']['size'] <= 0) {
+            echo 'Please select a file to import.';
+            return;
+        }
+
+        $config['upload_path']          = './uploads/csv/recipes';
+        $config['allowed_types']        = 'csv';
+        $this->load->library('upload', $config);
+
+        if (!$this->upload->do_upload('import_file')) {
+            $error = array('error' => $this->upload->display_errors());
+            print($error['error']);
+            return;
+        }
+
+        $file_name = $this->upload->data('file_name');
+        $file = fopen('uploads/csv/recipes/' . $file_name, 'r');
+
+        $this->db->trans_begin();
+        $flag          = true;   // becomes false on any hard error -> rollback
+        $imported      = 0;      // recipes created
+        $skipped       = 0;      // recipes skipped because they already exist
+        $error_msg     = '';
+        $row_no        = 1;      // 1 = header row
+        $current_recipe_name    = '';
+        $current_recipe_id      = null;
+        $current_recipe_skipped = false;
+
+        while (($importdata = fgetcsv($file, NULL, ',')) !== FALSE) {
+            $row_no++;
+            if ($importdata === false || count($importdata) < 8) {
+                continue; // malformed / incomplete row
+            }
+
+            // strip UTF-8 BOM (Excel) from the first cell
+            $importdata[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string)$importdata[0]);
+
+            // skip the header row (either the very first row or any row starting with "recipe_name")
+            if ($row_no == 2 || strtolower(trim($importdata[0])) === 'recipe_name') {
+                continue;
+            }
+
+            $recipe_name     = trim((string)$importdata[0]);
+            $output_product  = trim((string)$importdata[1]);
+            $yield_quantity  = (float)$importdata[2];
+            $overhead_cost   = (isset($importdata[3]) && trim((string)$importdata[3]) !== '') ? (float)$importdata[3] : 0;
+            $overhead_type   = (isset($importdata[4]) && strtolower(trim((string)$importdata[4])) === 'per_unit') ? 'per_unit' : 'fixed';
+            $notes           = (isset($importdata[5])) ? trim((string)$importdata[5]) : '';
+            $ingredient_item = trim((string)$importdata[6]);
+            $ingredient_qty  = (isset($importdata[7])) ? (float)$importdata[7] : 0;
+            $ingredient_unit = (isset($importdata[8])) ? trim((string)$importdata[8]) : '';
+
+            // ----- basic validation -----
+            if ($recipe_name === '' || $output_product === '') {
+                $flag = false;
+                $error_msg = 'Row ' . $row_no . ': Recipe Name and Output Product are required.';
+                break;
+            }
+            if ($yield_quantity <= 0) {
+                $flag = false;
+                $error_msg = 'Row ' . $row_no . ': Yield Quantity must be greater than 0.';
+                break;
+            }
+            if ($ingredient_item === '' || $ingredient_qty <= 0) {
+                $flag = false;
+                $error_msg = 'Row ' . $row_no . ': Ingredient Item and Ingredient Quantity are required.';
+                break;
+            }
+
+            // ----- start of a new recipe group? -----
+            if ($recipe_name !== $current_recipe_name) {
+                $current_recipe_name    = $recipe_name;
+                $current_recipe_id      = null;
+                $current_recipe_skipped = false;
+
+                // skip recipe groups that already exist in the database
+                $exists = $this->db->where('recipe_name', $recipe_name)->count_all_results('recipes');
+                if ($exists > 0) {
+                    $current_recipe_skipped = true;
+                    $skipped++;
+                    continue;
+                }
+
+                $output_id = $this->_get_item_id($output_product);
+                if (!$output_id) {
+                    $flag = false;
+                    $error_msg = 'Row ' . $row_no . ': Output Product "' . $output_product . '" not found in Items.';
+                    break;
+                }
+
+                $recipe_data = array(
+                    'recipe_name'        => $recipe_name,
+                    'output_product_id'  => $output_id,
+                    'yield_quantity'     => $yield_quantity,
+                    'overhead_cost'      => $overhead_cost,
+                    'overhead_cost_type' => $overhead_type,
+                    'notes'              => $notes,
+                    'created_by'         => (int)$this->session->userdata('inv_userid'),
+                    'created_at'         => date('Y-m-d H:i:s'),
+                );
+                $this->db->insert('recipes', $recipe_data);
+                $current_recipe_id = $this->db->insert_id();
+                if (!$current_recipe_id) {
+                    $flag = false;
+                    $error_msg = 'Row ' . $row_no . ': Failed to insert recipe "' . $recipe_name . '".';
+                    break;
+                }
+                $imported++;
+            }
+
+            // ----- ingredient rows of a skipped recipe are ignored -----
+            if ($current_recipe_skipped) {
+                continue;
+            }
+
+            $ingredient_id = $this->_get_item_id($ingredient_item);
+            if (!$ingredient_id) {
+                $flag = false;
+                $error_msg = 'Row ' . $row_no . ': Ingredient "' . $ingredient_item . '" not found in Items.';
+                break;
+            }
+
+            $unit = ($ingredient_unit !== '') ? $ingredient_unit : $this->_get_item_unit_name($ingredient_id);
+
+            $this->db->insert('recipe_items', array(
+                'recipe_id' => $current_recipe_id,
+                'item_id'   => $ingredient_id,
+                'quantity'  => $ingredient_qty,
+                'unit'      => $unit,
+            ));
+        }
+
+        fclose($file);
+
+        if (!$flag) {
+            $this->db->trans_rollback();
+            echo ($error_msg !== '') ? $error_msg : 'failed';
+            return;
+        }
+
+        if ($imported == 0) {
+            $this->db->trans_rollback();
+            echo ($skipped > 0) ? 'All recipes in the file already exist. Nothing imported.' : 'No valid recipe rows found in the file.';
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->session->set_flashdata('success', 'Recipes imported successfully! Imported: ' . $imported . ', Skipped (already exist): ' . $skipped);
+        echo 'success';
+    }
+
+    /**
+     * Resolve an item (by code first, then by name) to its db_items.id.
+     * Returns 0 when no active item matches.
+     */
+    private function _get_item_id($term)
+    {
+        $term = trim((string)$term);
+        if ($term === '') {
+            return 0;
+        }
+
+        // exact match on item code
+        $q = $this->db->query("SELECT id FROM db_items WHERE status = 1 AND item_code = ? LIMIT 1", array($term));
+        if ($q->num_rows() > 0) {
+            return (int)$q->row()->id;
+        }
+
+        // case-insensitive exact match on item name
+        $q = $this->db->query("SELECT id FROM db_items WHERE status = 1 AND UPPER(TRIM(item_name)) = UPPER(TRIM(?)) LIMIT 1", array($term));
+        if ($q->num_rows() > 0) {
+            return (int)$q->row()->id;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Return the default unit name (KG, PCS, ...) of an item, or 'PCS' as fallback.
+     */
+    private function _get_item_unit_name($item_id)
+    {
+        $q = $this->db->query("SELECT c.unit_name FROM db_items a LEFT JOIN db_units c ON c.id = a.unit_id WHERE a.id = ?", array($item_id));
+        if ($q->num_rows() > 0 && $q->row()->unit_name) {
+            return $q->row()->unit_name;
+        }
+        return 'PCS';
+    }
 }
