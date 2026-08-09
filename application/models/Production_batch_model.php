@@ -8,8 +8,8 @@ class Production_batch_model extends CI_Model
     public $id = 'id';
 
     // Columns for DataTables ordering and searching
-    private $column_order = array(null, 'batch_code', 'recipe_id', 'batch_quantity', 'status', 'created_by', 'created_at');
-    private $column_search = array('batch_code', 'notes', 'r.recipe_name');
+    private $column_order = array(null, 'production_batches.batch_code', 'production_batches.recipe_id', 'production_batches.batch_quantity', 'production_batches.status', 'production_batches.created_by', 'production_batches.created_at');
+    private $column_search = array('production_batches.batch_code', 'production_batches.notes', 'r.recipe_name');
     private $order = array('id' => 'desc');
 
     public function __construct()
