@@ -91,7 +91,7 @@ function multi_delete() {
     $.ajax({
         type: 'POST',
         url: base_url + 'production/multi_delete',
-        data: { ids: ids },
+        data: { 'ids[]': ids },
         traditional: true,
         success: function (result) {
             if (result.trim() === "success") {
