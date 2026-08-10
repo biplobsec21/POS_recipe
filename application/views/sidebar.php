@@ -288,7 +288,7 @@ $CI = &get_instance();
       <?php } ?>
 
       <?php if ($CI->permissions('items_add') || $CI->permissions('items_view') || $CI->permissions('items_category_add') || $CI->permissions('items_category_view') || $CI->permissions('brand_add') || $CI->permissions('brand_view') || $CI->permissions('print_labels')) { ?>
-        <li class="items-list-active-li items-active-li  category-view-active-li category-active-li brand-active-li brand-view-active-li labels-active-li import_items-active-li recipe-list-active-li recipe-active-li treeview">
+        <li class="items-list-active-li items-active-li  category-view-active-li category-active-li brand-active-li brand-view-active-li labels-active-li import_items-active-li treeview">
           <a href="#">
             <i class="fa fa-cubes text-aqua"></i> <span><?= $this->lang->line('items'); ?></span>
             <span class="pull-right-container">
