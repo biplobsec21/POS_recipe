@@ -306,6 +306,8 @@ class Items extends MY_Controller
 			$this->session->set_flashdata('warning', 'No transaction history found for this item.');
 		}
 
+
+
 		$data['page_title'] = "Stock History" . ' - ' . $item_info->item_name;
 		$data['q_id'] = $item_id;
 
