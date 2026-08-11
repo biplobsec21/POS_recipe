@@ -451,14 +451,6 @@ class Import extends MY_Controller
                     }
                 }
 
-                $q1 = $this->items_model->stock_entry($CUR_DATE, $item_id);
-                if (!$q1) {
-                    $flag = false; //new
-                    return "failed";
-                }
-
-
-
                 //UPDATE itemS QUANTITY IN itemS TABLE
                 $q6 = $this->pos_model->update_items_quantity($item_id);
                 if (!$q6) {

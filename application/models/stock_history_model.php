@@ -103,6 +103,7 @@ class Stock_history_model extends CI_Model
         FROM db_stockentry 
         WHERE item_id = $item_id 
         AND status = 1 
+        AND qty <> 0
         AND (note NOT LIKE '%Production%' OR note IS NULL)
     ");
         if ($query) $summary['total_stock_adjustment'] = $query->row()->total;
@@ -232,8 +233,9 @@ class Stock_history_model extends CI_Model
         $this->db->from('db_stockentry se');
         $this->db->where('se.item_id', $item_id);
         $this->db->where('se.status', 1);
-        // Exclude only production consumption duplicates (keep opening stock and production reverts)
-        $this->db->where("(se.note NOT LIKE '%Production Consumption - Batch:%')");
+        $this->db->where('se.qty <>', 0);
+        // Include opening stock rows even when note is null/empty, but exclude production-consumption duplicates.
+        $this->db->where("(se.note IS NULL OR se.note = '' OR se.note NOT LIKE '%Production Consumption - Batch:%')");
         $stock_entries = $this->db->get();
         if ($stock_entries) $transactions = array_merge($transactions, $stock_entries->result());
 
@@ -292,11 +294,9 @@ class Stock_history_model extends CI_Model
             return $time_a - $time_b;
         });
 
-        // Calculate running balance from current stock backward method
+        // Calculate running balance and keep the ledger in chronological order so
+        // the opening balance appears first and each next row reflects the updated balance.
         $transactions_with_balance = $this->calculate_running_balance_from_current($transactions, $item_id);
-
-        // Now reverse to show newest first
-        $transactions_with_balance = array_reverse($transactions_with_balance);
 
         // Apply pagination AFTER calculating balance
         return array_slice($transactions_with_balance, $start, $length);
@@ -316,19 +316,14 @@ class Stock_history_model extends CI_Model
         $current_stock_result = $this->db->get()->row();
         $current_stock = $current_stock_result ? $current_stock_result->stock : 0;
 
-        // Start from current stock and work forward through all transactions
+        // Build a straight running balance from the transaction stream.
+        // This keeps the opening stock row at its own value instead of shifting
+        // every earlier row to fit the current stock from the items table.
         $running_balance = 0;
 
         foreach ($transactions as $transaction) {
-            $running_balance += $transaction->quantity_change;
+            $running_balance += (float) $transaction->quantity_change;
             $transaction->new_quantity = $running_balance;
-        }
-
-        // Now adjust all balances so the last one equals current stock
-        $adjustment = $current_stock - $running_balance;
-
-        foreach ($transactions as $transaction) {
-            $transaction->new_quantity += $adjustment;
         }
 
         return $transactions;
@@ -370,6 +365,7 @@ class Stock_history_model extends CI_Model
             $this->db->from('db_stockentry')
                 ->where('item_id', $item_id)
                 ->where('status', 1)
+                ->where('qty <>', 0)
                 ->where("(note NOT LIKE '%Production Consumption - Batch:%' OR note IS NULL)")
                 ->count_all_results(),
 
