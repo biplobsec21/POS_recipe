@@ -26,10 +26,22 @@ class Stock_history_model extends CI_Model
             'total_damaged' => 0,
         );
 
-        // Get current stock
-        $item = $this->db->select('stock as current_stock')->from('db_items')->where('id', $item_id)->get()->row();
-        if ($item) {
-            $summary['current_stock'] = $item->current_stock;
+        // Derive current stock from the transaction ledger so the page matches
+        // the same balance shown in the stock-history table.
+        $transactions = $this->get_transaction_history($item_id, 0, 1000);
+        if (!empty($transactions)) {
+            $last_transaction = end($transactions);
+            if (isset($last_transaction->new_quantity)) {
+                $summary['current_stock'] = (float) $last_transaction->new_quantity;
+            }
+        }
+
+        // Fall back to the stored item snapshot only if no transaction history exists.
+        if ((float) $summary['current_stock'] == 0) {
+            $item = $this->db->select('stock as current_stock')->from('db_items')->where('id', $item_id)->get()->row();
+            if ($item) {
+                $summary['current_stock'] = (float) $item->current_stock;
+            }
         }
 
         // Total Purchase
@@ -250,7 +262,8 @@ class Stock_history_model extends CI_Model
         im.id as source_id,
         'production_consume' as source_table,
         im.id as detail_id,
-        im.created_at as sort_date
+        im.created_at as sort_date,
+        im.reference_id as production_batch_id
     ", false);
         $this->db->from('inventory_movements im');
         $this->db->join('production_batches pb', 'pb.id = im.reference_id', 'left');

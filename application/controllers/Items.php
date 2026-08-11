@@ -297,9 +297,13 @@ class Items extends MY_Controller
 			show_404();
 		}
 
+		$stock_summary = $this->stock_history_model->get_stock_summary($item_id);
+		$transactions = $this->stock_history_model->get_transaction_history($item_id, 0, 1000);
+
+		$item_info->stock = $stock_summary['current_stock'];
 		$data['item_info'] = $item_info;
-		$data['stock_summary'] = $this->stock_history_model->get_stock_summary($item_id);
-		$data['transactions'] = $this->stock_history_model->get_transaction_history($item_id, 0, 1000);
+		$data['stock_summary'] = $stock_summary;
+		$data['transactions'] = $transactions;
 
 		// Check if we got any data
 		if (empty($data['transactions']) && !$this->input->is_ajax_request()) {
@@ -312,6 +316,25 @@ class Items extends MY_Controller
 		$data['q_id'] = $item_id;
 
 		$this->load->view('stock_history', $data);
+	}
+
+	public function sync_current_stock($item_id)
+	{
+		$this->permission_check_with_msg('items_edit');
+		$this->load->model('stock_history_model');
+
+		$summary = $this->stock_history_model->get_stock_summary($item_id);
+		$current_stock = isset($summary['current_stock']) ? (float) $summary['current_stock'] : 0;
+
+		$this->db->where('id', $item_id);
+		$this->db->update('db_items', array('stock' => $current_stock));
+
+		if ($this->db->error()['code'] !== 0) {
+			echo json_encode(array('success' => false, 'message' => 'Database update failed.'));
+			return;
+		}
+
+		echo json_encode(array('success' => true, 'stock' => $current_stock));
 	}
 	// AJAX method for paginated transactions
 	// AJAX method for paginated transactions

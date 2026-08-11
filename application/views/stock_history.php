@@ -114,6 +114,11 @@
                                         </span><br>
                                         <strong>Alert Quantity:</strong> <?= $item_info->alert_qty; ?><br>
                                         <strong>Category:</strong> <?= $item_info->category_name; ?>
+                                        <div style="margin-top: 10px;">
+                                            <button type="button" id="sync-current-stock-btn" class="btn btn-warning btn-sm">
+                                                <i class="fa fa-refresh"></i> Sync Current Stock
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="col-md-3">
                                         <strong>Brand:</strong> <?= $item_info->brand_name; ?><br>
@@ -232,8 +237,24 @@
                                                 </td>
                                                 <td><strong><?= $transaction->new_quantity; ?></strong></td>
                                                 <td><?= date('d-m-Y h:i A', strtotime($transaction->transaction_date)); ?></td>
-                                                <td><code><?= $transaction->reference_no; ?></code></td>
-                                                <td><?= $transaction->customer_supplier_info; ?></td>
+                                                <td>
+                                                    <?php if ($transaction->source_table === 'production_consume' && !empty($transaction->production_batch_id)): ?>
+                                                        <a href="<?= base_url('production/view/' . (int) $transaction->production_batch_id); ?>" target="_blank" rel="noopener">
+                                                            <code><?= htmlspecialchars($transaction->reference_no, ENT_QUOTES, 'UTF-8'); ?></code>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <code><?= htmlspecialchars($transaction->reference_no, ENT_QUOTES, 'UTF-8'); ?></code>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if ($transaction->source_table === 'production_consume' && !empty($transaction->production_batch_id)): ?>
+                                                        <a href="<?= base_url('production/view/' . (int) $transaction->production_batch_id); ?>" target="_blank" rel="noopener">
+                                                            <?= htmlspecialchars($transaction->customer_supplier_info, ENT_QUOTES, 'UTF-8'); ?>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <?= htmlspecialchars($transaction->customer_supplier_info, ENT_QUOTES, 'UTF-8'); ?>
+                                                    <?php endif; ?>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -260,6 +281,35 @@
     <?php include "comman/code_js_datatable.php"; ?>
 
     <script type="text/javascript">
+        $(document).ready(function() {
+            $('#sync-current-stock-btn').on('click', function() {
+                var $btn = $(this);
+                var itemId = <?= (int) $q_id; ?>;
+
+                $btn.prop('disabled', true).text('Syncing...');
+
+                $.ajax({
+                    url: '<?= base_url('items/sync_current_stock/') ?>' + itemId,
+                    type: 'POST',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response && response.success) {
+                            alert('Stock synced successfully. Current stock set to: ' + response.stock);
+                            location.reload();
+                        } else {
+                            alert((response && response.message) ? response.message : 'Failed to sync stock.');
+                        }
+                    },
+                    error: function() {
+                        alert('Error syncing stock.');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).text('Sync Current Stock');
+                    }
+                });
+            });
+        });
+
         function load_datatable() {
             //datatables
             var table = $('#transaction_table').DataTable({
@@ -315,8 +365,8 @@
                 "serverSide": false, // Make sure this is false for client-side processing
                 "ordering": true,
                 "order": [
-                    [3, 'desc']
-                ], // Order by date column (4th column) descending
+                    [3, 'asc']
+                ], // Keep the ledger chronological so the opening balance appears first
                 "responsive": true,
                 "pageLength": 25,
                 "lengthMenu": [10, 25, 50, 100, 500, 1000],
@@ -363,11 +413,20 @@
                     {
                         "data": "reference_no",
                         "render": function(data, type, row) {
+                            if (row.source_table === 'production_consume' && row.production_batch_id) {
+                                return '<a href="<?= base_url('production/view/') ?>' + row.production_batch_id + '" target="_blank" rel="noopener"><code>' + data + '</code></a>';
+                            }
                             return '<code>' + data + '</code>';
                         }
                     },
                     {
-                        "data": "customer_supplier_info"
+                        "data": "customer_supplier_info",
+                        "render": function(data, type, row) {
+                            if (row.source_table === 'production_consume' && row.production_batch_id) {
+                                return '<a href="<?= base_url('production/view/') ?>' + row.production_batch_id + '" target="_blank" rel="noopener">' + data + '</a>';
+                            }
+                            return data;
+                        }
                     }
                 ],
                 "columnDefs": [{

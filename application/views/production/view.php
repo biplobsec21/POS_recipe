@@ -192,6 +192,12 @@ $currency = isset($this->data['currency']) ? $this->data['currency'] : '';
                             </div>
                         </div>
 
+                        <?php if (strpos((string) $production->batch_code, 'PROD-RESTORED-') === 0): ?>
+                            <div class="alert alert-warning" style="margin-top: 15px;">
+                                <strong>Historical batch restore:</strong> this batch was restored only to keep the stock history linked after missing production records were detected. The original production record could not be reconstructed exactly, so the recipe cost and ingredient detail may not match the original batch perfectly.
+                            </div>
+                        <?php endif; ?>
+
                         <?php if (!empty($recipe) || !empty($cost_breakdown)): ?>
                             <div class="box box-default">
                                 <div class="box-header with-border">
@@ -236,6 +242,11 @@ $currency = isset($this->data['currency']) ? $this->data['currency'] : '';
                                 <h3 class="box-title">Recipe Ingredients</h3>
                             </div>
                             <div class="box-body">
+                                <?php if (strpos((string) $production->batch_code, 'PROD-RESTORED-') === 0): ?>
+                                    <div class="alert alert-info">
+                                        This restored batch is only a historical link. Ingredient values are displayed for reference only and may not reflect the exact original production recipe.
+                                    </div>
+                                <?php endif; ?>
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-striped">
                                         <thead>
