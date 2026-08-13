@@ -336,6 +336,114 @@ class Items extends MY_Controller
 
 		echo json_encode(array('success' => true, 'stock' => $current_stock));
 	}
+
+	public function sync_all_items_stock()
+	{
+		$this->permission_check_with_msg('items_edit');
+		$this->load->model('stock_history_model');
+
+		try {
+			// Get all active items
+			$query = $this->db->select('id, item_name, item_code, stock')->from('db_items')->where('status', 1)->get();
+			$items = $query->result();
+
+			if (empty($items)) {
+				echo json_encode(array('success' => false, 'message' => 'No items found to synchronize.'));
+				return;
+			}
+
+			$sync_count = 0;
+			$error_count = 0;
+			$synced_items = array();
+			$error_items = array();
+
+			foreach ($items as $item) {
+				$summary = $this->stock_history_model->get_stock_summary($item->id);
+				$ledger_stock = isset($summary['current_stock']) ? (float) $summary['current_stock'] : 0;
+				$old_stock = (float) $item->stock;
+
+				// Check if there's a discrepancy
+				if ($old_stock != $ledger_stock) {
+					$this->db->where('id', $item->id);
+					$update_result = $this->db->update('db_items', array('stock' => $ledger_stock));
+
+					if ($update_result) {
+						$sync_count++;
+						$synced_items[] = array(
+							'item_id' => $item->id,
+							'item_code' => $item->item_code,
+							'item_name' => $item->item_name,
+							'old_stock' => $old_stock,
+							'new_stock' => $ledger_stock,
+							'difference' => $ledger_stock - $old_stock
+						);
+
+						// Log to database
+						$this->_log_stock_sync($item->id, $item->item_code, $item->item_name, $old_stock, $ledger_stock);
+					} else {
+						$error_count++;
+						$error_items[] = array(
+							'item_id' => $item->id,
+							'item_code' => $item->item_code,
+							'item_name' => $item->item_name,
+							'error' => 'Failed to update'
+						);
+					}
+				}
+			}
+
+			$message = "Successfully synchronized " . $sync_count . " item(s) with discrepancies.";
+			if ($error_count > 0) {
+				$message .= " (" . $error_count . " failed)";
+			}
+
+			echo json_encode(array(
+				'success' => true,
+				'message' => $message,
+				'synced' => $sync_count,
+				'failed' => $error_count,
+				'synced_items' => $synced_items,
+				'error_items' => $error_items
+			));
+		} catch (Exception $e) {
+			echo json_encode(array('success' => false, 'message' => 'Error: ' . $e->getMessage()));
+		}
+	}
+
+	private function _log_stock_sync($item_id, $item_code, $item_name, $old_stock, $new_stock)
+	{
+		// Check if stock_sync_log table exists, create if not
+		if (!$this->db->table_exists('stock_sync_log')) {
+			$this->db->query("
+				CREATE TABLE IF NOT EXISTS stock_sync_log (
+					id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+					item_id INT(11) NOT NULL,
+					item_code VARCHAR(255),
+					item_name VARCHAR(255),
+					old_stock DECIMAL(20, 4),
+					new_stock DECIMAL(20, 4),
+					difference DECIMAL(20, 4),
+					synced_by INT(11),
+					synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+					KEY item_id (item_id)
+				)
+			");
+		}
+
+		// Insert log entry
+		$log_data = array(
+			'item_id' => $item_id,
+			'item_code' => $item_code,
+			'item_name' => $item_name,
+			'old_stock' => $old_stock,
+			'new_stock' => $new_stock,
+			'difference' => $new_stock - $old_stock,
+			'synced_by' => $this->session->userdata('inv_userid'),
+			'synced_at' => date('Y-m-d H:i:s')
+		);
+
+		$this->db->insert('stock_sync_log', $log_data);
+	}
 	// AJAX method for paginated transactions
 	// AJAX method for paginated transactions
 	public function ajax_stock_history()

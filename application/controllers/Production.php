@@ -159,13 +159,6 @@ class Production extends MY_Controller
                     throw new Exception("Failed to update stock for " . $item_details->item_name);
                 }
 
-                // UPDATE items quantity in items table
-                $this->load->model('pos_model');
-                $update_qty_result = $this->pos_model->update_items_quantity($item->item_id);
-                if (!$update_qty_result) {
-                    throw new Exception("Failed to update item quantity for " . $item_details->item_name);
-                }
-
                 // Log inventory movement for consumption
                 $movement_id = $this->Inventory_movements_model->insert(array(
                     'item_id' => $item->item_id,
@@ -178,6 +171,17 @@ class Production extends MY_Controller
 
                 if (!$movement_id) {
                     throw new Exception("Failed to log inventory movement for " . $item_details->item_name);
+                }
+
+                // Sync item stock to match stock history ledger
+                $this->load->model('stock_history_model');
+                $stock_summary = $this->stock_history_model->get_stock_summary($item->item_id);
+                $synced_stock = isset($stock_summary['current_stock']) ? (float) $stock_summary['current_stock'] : 0;
+                
+                $this->db->where('id', $item->item_id);
+                $sync_result = $this->db->update('db_items', array('stock' => $synced_stock));
+                if (!$sync_result) {
+                    throw new Exception("Failed to sync stock for " . $item_details->item_name);
                 }
             }
 
@@ -212,13 +216,6 @@ class Production extends MY_Controller
                 throw new Exception("Failed to update output product stock.");
             }
 
-            // UPDATE items quantity in items table for output product
-            $this->load->model('pos_model');
-            $update_output_qty_result = $this->pos_model->update_items_quantity($recipe->output_product_id);
-            if (!$update_output_qty_result) {
-                throw new Exception("Failed to update output product quantity.");
-            }
-
             // Log inventory movement for output
             $output_movement_id = $this->Inventory_movements_model->insert(array(
                 'item_id' => $recipe->output_product_id,
@@ -231,6 +228,17 @@ class Production extends MY_Controller
 
             if (!$output_movement_id) {
                 throw new Exception("Failed to log output inventory movement.");
+            }
+
+            // Sync output product stock to match stock history ledger
+            $this->load->model('stock_history_model');
+            $output_stock_summary = $this->stock_history_model->get_stock_summary($recipe->output_product_id);
+            $synced_output_stock = isset($output_stock_summary['current_stock']) ? (float) $output_stock_summary['current_stock'] : 0;
+            
+            $this->db->where('id', $recipe->output_product_id);
+            $sync_output_result = $this->db->update('db_items', array('stock' => $synced_output_stock));
+            if (!$sync_output_result) {
+                throw new Exception("Failed to sync output product stock.");
             }
 
             // Update production batch with cost and approval info
@@ -522,10 +530,15 @@ class Production extends MY_Controller
                 throw new Exception("Failed to revert stock for item ID: " . $item->item_id);
             }
 
-            $this->load->model('pos_model');
-            $update_qty_result = $this->pos_model->update_items_quantity($item->item_id);
-            if (!$update_qty_result) {
-                throw new Exception("Failed to update item quantity during revert.");
+            // Sync item stock to match stock history ledger during revert
+            $this->load->model('stock_history_model');
+            $stock_summary = $this->stock_history_model->get_stock_summary($item->item_id);
+            $synced_stock = isset($stock_summary['current_stock']) ? (float) $stock_summary['current_stock'] : 0;
+            
+            $this->db->where('id', $item->item_id);
+            $sync_result = $this->db->update('db_items', array('stock' => $synced_stock));
+            if (!$sync_result) {
+                throw new Exception("Failed to sync stock during revert for item ID: " . $item->item_id);
             }
         }
 
@@ -541,10 +554,15 @@ class Production extends MY_Controller
             throw new Exception("Failed to revert output product stock.");
         }
 
-        $this->load->model('pos_model');
-        $update_output_qty_result = $this->pos_model->update_items_quantity($recipe->output_product_id);
-        if (!$update_output_qty_result) {
-            throw new Exception("Failed to update output product quantity during revert.");
+        // Sync output product stock to match stock history ledger during revert
+        $this->load->model('stock_history_model');
+        $output_stock_summary = $this->stock_history_model->get_stock_summary($recipe->output_product_id);
+        $synced_output_stock = isset($output_stock_summary['current_stock']) ? (float) $output_stock_summary['current_stock'] : 0;
+        
+        $this->db->where('id', $recipe->output_product_id);
+        $sync_output_result = $this->db->update('db_items', array('stock' => $synced_output_stock));
+        if (!$sync_output_result) {
+            throw new Exception("Failed to sync output product stock during revert.");
         }
 
         $notes = $production_batch->notes;

@@ -98,6 +98,13 @@
                 <i class="fa fa-plus " ></i> <?= $this->lang->line('new_item'); ?></a>
               </div>
              <?php } ?>
+             
+             <?php if($CI->permissions('items_edit')) { ?>
+              <div class="box-tools" style="margin-top: 5px;display:none !important">
+                <button type="button" class="btn btn-block btn-warning" id="sync_all_items_btn">
+                <i class="fa fa-refresh" ></i> Synchronize All Items Stock</button>
+              </div>
+             <?php } ?>
             </div>
             <!-- /.box-header -->
             <div class="box-body">
@@ -247,6 +254,136 @@ $("#brand_id,#category_id").on("change",function(){
     $('#example2').DataTable().destroy();
     load_datatable();
 });
+
+// Synchronize all items stock
+$('#sync_all_items_btn').on('click', function() {
+    var confirmSync = confirm('This will synchronize stock quantity for ALL items to match the ledger. Continue?');
+    if (!confirmSync) {
+        return;
+    }
+    
+    var btn = $(this);
+    var originalText = btn.html();
+    btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Synchronizing...');
+    
+    $.ajax({
+        url: '<?php echo site_url("items/sync_all_items_stock") ?>',
+        type: 'POST',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                // Show detailed log
+                var logMessage = response.message + '\n\n';
+                
+                if (response.synced_items && response.synced_items.length > 0) {
+                    logMessage += '=== SYNCED ITEMS ===\n';
+                    $.each(response.synced_items, function(index, item) {
+                        var sign = item.difference >= 0 ? '+' : '';
+                        logMessage += '\n' + (index + 1) + '. ' + item.item_code + ' - ' + item.item_name + '\n';
+                        logMessage += '   Old Stock: ' + parseFloat(item.old_stock).toFixed(4) + '\n';
+                        logMessage += '   New Stock: ' + parseFloat(item.new_stock).toFixed(4) + '\n';
+                        logMessage += '   Difference: ' + sign + parseFloat(item.difference).toFixed(4) + '\n';
+                    });
+                }
+                
+                if (response.error_items && response.error_items.length > 0) {
+                    logMessage += '\n\n=== FAILED ITEMS ===\n';
+                    $.each(response.error_items, function(index, item) {
+                        logMessage += '\n' + (index + 1) + '. ' + item.item_code + ' - ' + item.item_name + '\n';
+                        logMessage += '   Error: ' + item.error + '\n';
+                    });
+                }
+                
+                // Create modal to show detailed log
+                var modalHtml = '<div class="modal fade" id="syncLogModal">' +
+                    '<div class="modal-dialog modal-lg">' +
+                    '<div class="modal-content">' +
+                    '<div class="modal-header">' +
+                    '<button type="button" class="close" data-dismiss="modal">&times;</button>' +
+                    '<h4 class="modal-title">Stock Synchronization Report</h4>' +
+                    '</div>' +
+                    '<div class="modal-body">' +
+                    '<pre style="max-height: 500px; overflow-y: auto; background-color: #f5f5f5; padding: 15px; border-radius: 4px;">' + 
+                    logMessage + 
+                    '</pre>' +
+                    '</div>' +
+                    '<div class="modal-footer">' +
+                    '<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>' +
+                    '<button type="button" class="btn btn-info" onclick="downloadSyncLog()">Download Report</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                // Remove old modal if exists
+                $('#syncLogModal').remove();
+                $('body').append(modalHtml);
+                
+                // Store log data for download
+                window.syncLogData = {
+                    message: response.message,
+                    syncedItems: response.synced_items,
+                    errorItems: response.error_items,
+                    timestamp: new Date().toLocaleString()
+                };
+                
+                $('#syncLogModal').modal('show');
+                
+                // Reload the datatable after a short delay
+                setTimeout(function() {
+                    $('#example2').DataTable().destroy();
+                    load_datatable();
+                }, 1500);
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('Failed to synchronize items stock. Please try again.');
+        },
+        complete: function() {
+            btn.prop('disabled', false).html(originalText);
+        }
+    });
+});
+
+// Download sync log as CSV
+function downloadSyncLog() {
+    if (!window.syncLogData) return;
+    
+    var csv = 'Stock Synchronization Report\n';
+    csv += 'Generated: ' + window.syncLogData.timestamp + '\n\n';
+    csv += window.syncLogData.message + '\n\n';
+    
+    if (window.syncLogData.syncedItems && window.syncLogData.syncedItems.length > 0) {
+        csv += 'SYNCED ITEMS\n';
+        csv += 'Item Code,Item Name,Old Stock,New Stock,Difference\n';
+        $.each(window.syncLogData.syncedItems, function(index, item) {
+            csv += '"' + item.item_code + '","' + item.item_name + '",' + 
+                   item.old_stock + ',' + item.new_stock + ',' + item.difference + '\n';
+        });
+    }
+    
+    if (window.syncLogData.errorItems && window.syncLogData.errorItems.length > 0) {
+        csv += '\n\nFAILED ITEMS\n';
+        csv += 'Item Code,Item Name,Error\n';
+        $.each(window.syncLogData.errorItems, function(index, item) {
+            csv += '"' + item.item_code + '","' + item.item_name + '","' + item.error + '"\n';
+        });
+    }
+    
+    // Download CSV
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'stock_sync_report_' + new Date().getTime() + '.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 
 </script>
 

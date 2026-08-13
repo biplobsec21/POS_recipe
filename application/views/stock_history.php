@@ -110,9 +110,9 @@
                                     <div class="col-md-3">
                                         <strong>Current Stock:</strong>
                                         <span class="label label-<?= $item_info->stock <= $item_info->alert_qty ? 'danger' : 'primary'; ?>">
-                                            <?= $item_info->stock; ?> <?= $item_info->unit_name; ?>
+                                            <?= number_format((float)$item_info->stock, 3); ?> <?= $item_info->unit_name; ?>
                                         </span><br>
-                                        <strong>Alert Quantity:</strong> <?= $item_info->alert_qty; ?><br>
+                                        <strong>Alert Quantity:</strong> <?= number_format((float)$item_info->alert_qty, 3); ?><br>
                                         <strong>Category:</strong> <?= $item_info->category_name; ?>
                                         <div style="margin-top: 10px;">
                                             <button type="button" id="sync-current-stock-btn" class="btn btn-warning btn-sm">
@@ -147,11 +147,11 @@
                                         <h3 class="box-title"><i class="fa fa-arrow-down"></i> Quantities In</h3>
                                     </div>
                                     <div class="box-body">
-                                        <p>Total Purchase: <span class="quantity-positive"><?= $stock_summary['total_purchase']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Opening Stock: <span class="quantity-positive"><?= $stock_summary['opening_stock']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Total Sell Return: <span class="quantity-positive"><?= $stock_summary['total_sell_return']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Production Output: <span class="quantity-positive"><?= $stock_summary['production_output']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Stock Transfers (In): <span class="quantity-positive"><?= $stock_summary['stock_transfers_in']; ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Purchase: <span class="quantity-positive"><?= number_format((float)$stock_summary['total_purchase'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Opening Stock: <span class="quantity-positive"><?= number_format((float)$stock_summary['opening_stock'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Sell Return: <span class="quantity-positive"><?= number_format((float)$stock_summary['total_sell_return'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Production Output: <span class="quantity-positive"><?= number_format((float)$stock_summary['production_output'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Stock Transfers (In): <span class="quantity-positive"><?= number_format((float)$stock_summary['stock_transfers_in'], 3); ?> <?= $item_info->unit_name; ?></span></p>
                                     </div>
                                 </div>
                             </div>
@@ -163,12 +163,12 @@
                                         <h3 class="box-title"><i class="fa fa-arrow-up"></i> Quantities Out</h3>
                                     </div>
                                     <div class="box-body">
-                                        <p>Total Sold: <span class="quantity-negative"><?= $stock_summary['total_sold']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Total Stock Adjustment: <span class="quantity-negative"><?= $stock_summary['total_stock_adjustment']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Total Purchase Return: <span class="quantity-negative"><?= $stock_summary['total_purchase_return']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Production Consumption: <span class="quantity-negative"><?= $stock_summary['production_consumption']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Stock Transfers (Out): <span class="quantity-negative"><?= $stock_summary['stock_transfers_out']; ?> <?= $item_info->unit_name; ?></span></p>
-                                        <p>Total Damaged: <span class="quantity-negative"><?= $stock_summary['total_damaged']; ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Sold: <span class="quantity-negative"><?= number_format((float)$stock_summary['total_sold'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Stock Adjustment: <span class="quantity-negative"><?= number_format((float)$stock_summary['total_stock_adjustment'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Purchase Return: <span class="quantity-negative"><?= number_format((float)$stock_summary['total_purchase_return'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Production Consumption: <span class="quantity-negative"><?= number_format((float)$stock_summary['production_consumption'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Stock Transfers (Out): <span class="quantity-negative"><?= number_format((float)$stock_summary['stock_transfers_out'], 3); ?> <?= $item_info->unit_name; ?></span></p>
+                                        <p>Total Damaged: <span class="quantity-negative"><?= number_format((float)$stock_summary['total_damaged'], 3); ?> <?= $item_info->unit_name; ?></span></p>
                                     </div>
                                 </div>
                             </div>
@@ -183,7 +183,7 @@
                                             <i class="fa fa-cubes"></i>
                                             Current Stock:
                                             <span class="text-<?= $item_info->stock <= $item_info->alert_qty ? 'danger' : 'primary'; ?>">
-                                                <?= $stock_summary['current_stock']; ?> <?= $item_info->unit_name; ?>
+                                                <?= number_format((float)$stock_summary['current_stock'], 3); ?> <?= $item_info->unit_name; ?>
                                             </span>
                                         </h2>
                                         <?php if ($item_info->stock <= $item_info->alert_qty): ?>
@@ -396,14 +396,14 @@
                         "render": function(data, type, row) {
                             var className = data >= 0 ? 'quantity-positive' : 'quantity-negative';
                             var sign = data >= 0 ? '+' : '';
-                            return '<span class="' + className + '">' + sign + parseFloat(data).toFixed(2) + '</span>';
+                            return '<span class="' + className + '">' + sign + parseFloat(data).toFixed(3) + '</span>';
                         }
                     },
                     {
                         "data": "new_quantity",
                         "render": function(data, type, row) {
                             // Ensure we never show negative stock (clamp at 0)
-                            var displayQty = Math.max(0, parseFloat(data)).toFixed(2);
+                            var displayQty = Math.max(0, parseFloat(data)).toFixed(3);
                             return '<strong>' + displayQty + '</strong>';
                         }
                     },
