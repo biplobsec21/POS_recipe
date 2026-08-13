@@ -930,19 +930,55 @@ defined('BASEPATH') or exit('No direct script access allowed');
             var to_date_db = convertToDbFormat(to_date);
 
             if (item_id) {
-                // Export item usage - use GET method
-                var url = base_url + 'production_dashboard/export_item_usage?item_id=' + item_id +
-                    '&from_date=' + encodeURIComponent(from_date_db) +
-                    '&to_date=' + encodeURIComponent(to_date_db) +
-                    '&status=' + encodeURIComponent(status || '');
-                window.location = url;
+                var form = $('<form>', {
+                    'method': 'POST',
+                    'action': base_url + 'production_dashboard/export_item_usage'
+                }).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'item_id',
+                    'value': item_id
+                })).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'from_date',
+                    'value': from_date_db
+                })).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'to_date',
+                    'value': to_date_db
+                })).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'status',
+                    'value': status || ''
+                }));
+
+                $('body').append(form);
+                form.submit();
+                form.remove();
             } else {
-                // Export productions - use GET method
-                var url = base_url + 'production_dashboard/export_productions?from_date=' + encodeURIComponent(from_date_db) +
-                    '&to_date=' + encodeURIComponent(to_date_db) +
-                    '&status=' + encodeURIComponent(status) +
-                    '&recipe_id=' + encodeURIComponent(recipe_id || '');
-                window.location = url;
+                var form = $('<form>', {
+                    'method': 'POST',
+                    'action': base_url + 'production_dashboard/export_productions'
+                }).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'from_date',
+                    'value': from_date_db
+                })).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'to_date',
+                    'value': to_date_db
+                })).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'status',
+                    'value': status
+                })).append($('<input>', {
+                    'type': 'hidden',
+                    'name': 'recipe_id',
+                    'value': recipe_id
+                }));
+
+                $('body').append(form);
+                form.submit();
+                form.remove();
             }
         }
 

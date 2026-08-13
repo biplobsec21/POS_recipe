@@ -139,10 +139,10 @@ class Production_dashboard extends MY_Controller
     {
         $this->permission_check('production_view');
 
-        $from_date = $this->input->get('from_date') ?: $this->input->post('from_date');
-        $to_date = $this->input->get('to_date') ?: $this->input->post('to_date');
-        $status = $this->input->get('status') ?: $this->input->post('status');
-        $recipe_id = $this->input->get('recipe_id') ?: $this->input->post('recipe_id');
+        $from_date = $this->input->post('from_date');
+        $to_date = $this->input->post('to_date');
+        $status = $this->input->post('status');
+        $recipe_id = $this->input->post('recipe_id');
 
         if (!$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
             echo "Invalid date format";
@@ -214,10 +214,10 @@ class Production_dashboard extends MY_Controller
     {
         $this->permission_check('production_view');
 
-        $item_id = $this->input->get('item_id') ?: $this->input->post('item_id');
-        $from_date = $this->input->get('from_date') ?: $this->input->post('from_date');
-        $to_date = $this->input->get('to_date') ?: $this->input->post('to_date');
-        $status = $this->input->get('status') ?: $this->input->post('status');
+        $item_id = $this->input->post('item_id');
+        $from_date = $this->input->post('from_date');
+        $to_date = $this->input->post('to_date');
+        $status = $this->input->post('status');
 
         if (!$item_id || !$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
             echo "Invalid input";
