@@ -100,12 +100,14 @@ class Stock_history_model extends CI_Model
     ");
         if ($query) $summary['production_output'] = $query->row()->total;
 
-        // Production Consumption (from inventory_movements only)
+        // Production Consumption (from approved productions only - cancelled/rejected are excluded)
         $query = $this->db->query("
         SELECT COALESCE(SUM(ABS(im.qty)), 0) as total 
         FROM inventory_movements im 
+        JOIN production_batches pb ON pb.id = im.reference_id
         WHERE im.item_id = $item_id 
         AND im.type = 'PRODUCTION_CONSUME'
+        AND pb.status = 'Approved'
     ");
         if ($query) $summary['production_consumption'] = $query->row()->total;
 
@@ -251,7 +253,7 @@ class Stock_history_model extends CI_Model
         $stock_entries = $this->db->get();
         if ($stock_entries) $transactions = array_merge($transactions, $stock_entries->result());
 
-        // 6. Production Consumption ONLY (no duplicates)
+        // 6. Production Consumption ONLY from approved productions (no cancelled/rejected)
         $this->db->select("
         'Production Consume' as type,
         -ABS(im.qty) as quantity_change,
@@ -269,6 +271,7 @@ class Stock_history_model extends CI_Model
         $this->db->join('production_batches pb', 'pb.id = im.reference_id', 'left');
         $this->db->where('im.item_id', $item_id);
         $this->db->where('im.type', 'PRODUCTION_CONSUME');
+        $this->db->where('pb.status', 'Approved'); // Only approved productions
         $production_consume = $this->db->get();
         if ($production_consume) $transactions = array_merge($transactions, $production_consume->result());
 
@@ -382,10 +385,12 @@ class Stock_history_model extends CI_Model
                 ->where("(note NOT LIKE '%Production Consumption - Batch:%' OR note IS NULL)")
                 ->count_all_results(),
 
-            // Production Consumption only
-            $this->db->from('inventory_movements')
-                ->where('item_id', $item_id)
-                ->where('type', 'PRODUCTION_CONSUME')
+            // Production Consumption only (approved productions)
+            $this->db->from('inventory_movements im')
+                ->join('production_batches pb', 'pb.id = im.reference_id', 'left')
+                ->where('im.item_id', $item_id)
+                ->where('im.type', 'PRODUCTION_CONSUME')
+                ->where('pb.status', 'Approved')
                 ->count_all_results(),
 
             // Damage (approved only)

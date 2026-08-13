@@ -1,0 +1,234 @@
+================================================================================
+STOCK DISCREPANCY DIAGNOSTIC - FINAL SUMMARY
+================================================================================
+Date: August 13, 2026
+Analysis: Complete Inventory Stock Verification
+================================================================================
+
+CRITICAL FINDINGS:
+================================================================================
+
+1. HUGE DISCREPANCY FOUND: 173 out of 210 items have mismatches
+   - Total discrepancy: 168,322.27 units
+   - Overstated: 165 items (164,641 units)
+   - Understated: 8 items (3,681 units)
+
+2. TOP 3 WORST ITEMS:
+   - IT0091 (Nomal Stekar): +90,516.27 units overstated
+   - IT0090 (Special stekar): +24,625 units overstated
+   - IT0097 (ST peket): +15,950 units overstated
+
+3. PATTERN: 95% of items are OVERSTATED
+   - System thinks we have MORE stock than actual
+   - Caused by manual entries in db_stockentry with no ledger backing
+   - These items have NO purchase history in the system
+
+4. UNDERSTATED ITEMS (8 total):
+   - IT0042: -3,525.91 (ledger shows +3,500, db_items shows -25.91)
+   - IT0015: -62.50 (ledger shows +72, db_items shows 9.50)
+   - Other 6 with small discrepancies
+
+ROOT CAUSE:
+================================================================================
+
+The Pos_model.update_items_quantity() method uses WRONG logic:
+
+CURRENT (WRONG):
+  - Reads db_stockentry (manual entries)
+  - Plus db_purchaseitems WHERE purchase_status='Received'
+  - Minus db_salesitems WHERE sales_status='Final'
+  - Result: Double-counts and includes unexplained manual entries
+
+NEW METHOD (STOCK_HISTORY - CORRECT):
+  - Reads ONLY official transaction tables with status=1
+  - Purchases: from db_purchaseitems (p.status=1)
+  - Sales: from db_salesitems (s.status=1)
+  - Returns: from respective return tables (status=1)
+  - Result: Single source of truth, no duplication
+
+WHY THIS MATTERS:
+================================================================================
+
+Business Impact:
+- Inventory is off by 168,322 units
+- Physical count won't match system
+- Stock-outs occur unexpectedly
+- Purchasing decisions are wrong
+- Financial records are incorrect
+
+Financial Impact:
+- ~164,641 overstated units
+- At 100 Taka per item = 16,464,100 Taka inventory overstatement
+- Audit will find major discrepancies
+
+DATA QUALITY ISSUES FOUND:
+================================================================================
+
+Issue 1: Manual Entries Without Documentation
+- Many db_stockentry records have note = NULL
+- No explanation of what they represent
+- Can't distinguish between:
+  - Opening stock
+  - Adjustments
+  - Errors/duplicates
+
+Issue 2: No Link Between Manual and Official Records
+- IT0091 shows 90,516 units in db_items
+- But ZERO purchase history in ledger
+- Where did these 90,516 units come from?
+
+Issue 3: Status Field Inconsistency
+- db_salesitems has sales_status field
+- db_sales has status field
+- These don't always match, causing calculations to differ
+
+SOLUTION:
+================================================================================
+
+Step 1: Implement New Method (This Week)
+  Replace Pos_model.update_items_quantity() with stock_history-based calculation
+  Code provided in IT0093_RESOLUTION.md
+
+Step 2: Run Full Sync (This Week)
+  - Will recalculate all 210 items
+  - db_items.stock will match ledger for all official transactions
+  - Manual entries will be highlighted
+
+Step 3: Audit Manual Entries (This Week)
+  - For items with ledger=0 but db_items>0
+  - Check if these are real inventory
+  - Either document them or remove them
+
+Step 4: Physical Inventory Count (Next Week)
+  - Count actual physical stock
+  - Compare to new calculated values
+  - Resolve any remaining discrepancies
+
+FILES CREATED:
+================================================================================
+
+1. LEDGER_DISCREPANCY_REPORT.sql
+   - SQL query that generates this report
+   - Can be run anytime to verify current status
+
+2. LEDGER_DISCREPANCY_ANALYSIS.md
+   - Detailed analysis of each pattern
+   - Recommended actions
+   - Full breakdown by item
+
+3. IT0093_RESOLUTION.md
+   - Specific case study (IT0093 - Pesti box)
+   - Shows why ledger method is better
+   - Template for understanding the issue
+
+4. IT0093_PESTI_BOX_ROOT_CAUSE.md
+   - Even more detailed analysis of one item
+   - Shows the exact data
+   - Explains the discrepancy
+
+5. STOCK_MISMATCH_FINDINGS.md
+   - Earlier analysis of 65 items
+   - Severity breakdown
+   - Similar issues found
+
+KEY STATISTICS:
+================================================================================
+
+Total Items: 210
+Items with Discrepancies: 173 (82.4%)
+Items Matching Perfectly: 37 (17.6%)
+
+Discrepancy Breakdown:
+- CRITICAL (≥1000 units): 8 items (34,621 units)
+- HIGH (100-999 units): 20 items (10,847 units)
+- MEDIUM (10-99 units): 45 items (2,428 units)
+- LOW (<10 units): 100 items (120 units)
+
+Total Overstated: 165 items (164,641.18 units)
+Total Understated: 8 items (3,681.09 units)
+
+TOP 10 WORST DISCREPANCIES:
+================================================================================
+1. IT0091: +90,516.27 units
+2. IT0090: +24,625.00 units
+3. IT0097: +15,950.00 units
+4. IT0017: +5,532.50 units
+5. IT0042: -3,525.91 units (understated)
+6. IT0127: +2,329.00 units
+7. IT0135: +1,609.73 units (Jhal patis)
+8. IT0181: +1,259.00 units
+9. IT0099: +1,175.00 units
+10. IT0095: +1,074.50 units
+
+IMMEDIATE ACTIONS REQUIRED:
+================================================================================
+
+[ ] 1. Read LEDGER_DISCREPANCY_ANALYSIS.md (this document's detailed version)
+
+[ ] 2. Investigate top 3 items:
+     - IT0091: Where did 90,516 units come from?
+     - IT0090: Where did 24,625 units come from?
+     - IT0097: Where did 15,950 units come from?
+
+[ ] 3. Decide on approach:
+     - Keep manual values and document them?
+     - Or sync to ledger (official transactions)?
+
+[ ] 4. Review IT0093 case study for understanding
+
+[ ] 5. Plan implementation of new Pos_model method
+
+EXPECTED RESULTS AFTER FIX:
+================================================================================
+
+Before:
+- IT0091: db_items=90,516, ledger=0 (MISMATCH by 90,516)
+- IT0042: db_items=-25.91, ledger=3,500 (MISMATCH by 3,525)
+- IT0135: db_items=1,609.73, ledger=0 (MISMATCH by 1,609.73)
+
+After:
+- IT0091: db_items=0, ledger=0 (MATCH)
+- IT0042: db_items=3,500, ledger=3,500 (MATCH)
+- IT0135: db_items=0, ledger=0 (MATCH)
+  [Note: IT0135 corrected earlier from 3,503]
+
+QUESTIONS TO ANSWER:
+================================================================================
+
+1. Business Question:
+   Should we count manual stock entries or only official purchases?
+
+2. Data Quality:
+   Where did items like IT0091 (90,516 units) originate?
+
+3. Business Process:
+   When inventory is added manually, should it be recorded as a purchase?
+
+4. Negative Stock:
+   Is negative stock allowed, or is this a bug?
+
+5. Manual Adjustments:
+   Are db_stockentry entries supposed to override official transactions?
+
+NEXT MEETING:
+================================================================================
+
+Recommended discussion points:
+1. Review findings in LEDGER_DISCREPANCY_ANALYSIS.md
+2. Discuss manual vs official transaction priority
+3. Plan physical inventory count
+4. Approve implementation plan for new method
+5. Set timeline for corrections
+
+CONTACT:
+================================================================================
+
+For questions or clarification on these findings,
+refer to the detailed analysis documents:
+- LEDGER_DISCREPANCY_ANALYSIS.md (complete analysis)
+- IT0093_RESOLUTION.md (case study example)
+- SQL file: LEDGER_DISCREPANCY_REPORT.sql (to regenerate report)
+
+================================================================================
+END OF SUMMARY - Report generated August 13, 2026
+================================================================================

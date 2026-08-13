@@ -331,7 +331,7 @@ $CI = &get_instance();
 
       <!-- Recipe Management -->
       <?php if ($CI->permissions('recipe_add') || $CI->permissions('recipe_view')) { ?>
-        <li class="recipe-list-active-li recipe-active-li production-list-active-li production-active-li treeview">
+        <li class="recipe-list-active-li recipe-active-li production-list-active-li production-active-li treeview <?php if(in_array($this->router->class, array('recipe','production','production_dashboard'))) echo 'active'; ?>">
           <a href="#">
             <i class="fa fa-flask text-aqua"></i> <span>Recipe Management</span>
             <span class="pull-right-container">
@@ -351,6 +351,9 @@ $CI = &get_instance();
             <!-- Production Batch Management -->
             <?php if ($CI->permissions('production_add')) { ?>
               <li class="production-active-li"><a href="<?php echo $base_url; ?>production/add"><i class="fa fa-plus-square-o "></i> <span>Add Production</span></a></li>
+            <?php } ?>
+            <?php if ($CI->permissions('production_view')) { ?>
+              <li class="production-dashboard-active-li <?php if($this->router->class == 'production_dashboard') echo 'active'; ?>"><a href="<?php echo $base_url; ?>production_dashboard"><i class="fa fa-bar-chart "></i> <span>Production Dashboard</span></a></li>
             <?php } ?>
             <?php if ($CI->permissions('production_view')) { ?>
               <li class="production-list-active-li"><a href="<?php echo $base_url; ?>production"><i class="fa fa-list "></i> <span>Production List</span></a></li>
