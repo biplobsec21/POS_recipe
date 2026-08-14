@@ -352,12 +352,19 @@ $CI = &get_instance();
             <?php if ($CI->permissions('production_add')) { ?>
               <li class="production-active-li"><a href="<?php echo $base_url; ?>production/add"><i class="fa fa-plus-square-o "></i> <span>Add Production</span></a></li>
             <?php } ?>
+             <?php if ($CI->permissions('production_view')) { ?>
+              <li class="production-list-active-li"><a href="<?php echo $base_url; ?>production"><i class="fa fa-list "></i> <span>Production List</span></a></li>
+            <?php } ?>
             <?php if ($CI->permissions('production_view')) { ?>
               <li class="production-dashboard-active-li"><a href="<?php echo $base_url; ?>production_dashboard"><i class="fa fa-bar-chart "></i> <span>Production Dashboard</span></a></li>
             <?php } ?>
             <?php if ($CI->permissions('production_view')) { ?>
-              <li class="production-list-active-li"><a href="<?php echo $base_url; ?>production"><i class="fa fa-list "></i> <span>Production List</span></a></li>
+              <li class="production-item-report-active-li"><a href="<?php echo $base_url; ?>production_item_report"><i class="fa fa-cube "></i> <span>Production Item Report</span></a></li>
             <?php } ?>
+            <?php if ($CI->permissions('production_view')) { ?>
+              <li class="production-summary-active-li"><a href="<?php echo $base_url; ?>production_summary"><i class="fa fa-list-ul "></i> <span>Production Summary</span></a></li>
+            <?php } ?>
+           
             <!-- End Production Batch Management -->
           </ul>
         </li>

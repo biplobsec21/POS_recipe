@@ -31,7 +31,7 @@ class Production_dashboard_model extends CI_Model
      */
     public function get_today_approved_count()
     {
-        $this->db->where('DATE(created_at)', date('Y-m-d'));
+        $this->db->where('DATE(approved_at)', date('Y-m-d'));
         $this->db->where('status', 'Approved');
         return (int) $this->db->count_all_results('production_batches');
     }
@@ -159,14 +159,13 @@ class Production_dashboard_model extends CI_Model
         $this->db->join('db_items as i', 'i.id = r.output_product_id', 'left');
         $this->db->join('db_users as u', 'u.id = pb.created_by', 'left');
         
-        $this->db->where('DATE(pb.created_at) >=', $from_date);
-        $this->db->where('DATE(pb.created_at) <=', $to_date);
+        // Always filter by Approved status and use approved_at for date range
+        $this->db->where('pb.status', 'Approved');
+        $this->db->where('pb.approved_at IS NOT NULL');
+        $this->db->where('DATE(pb.approved_at) >=', $from_date);
+        $this->db->where('DATE(pb.approved_at) <=', $to_date);
         
-        // Apply optional filters
-        if (isset($filters['status']) && $filters['status']) {
-            $this->db->where('pb.status', $filters['status']);
-        }
-        
+        // Apply optional filters (recipe_id, warehouse_id)
         if (isset($filters['recipe_id']) && $filters['recipe_id']) {
             $this->db->where('pb.recipe_id', $filters['recipe_id']);
         }
@@ -175,8 +174,14 @@ class Production_dashboard_model extends CI_Model
             $this->db->where('pb.warehouse_id', $filters['warehouse_id']);
         }
         
-        $this->db->order_by('pb.created_at', 'DESC');
-        return $this->db->get()->result();
+        $this->db->order_by('pb.approved_at', 'DESC');
+        $result = $this->db->get()->result();
+        
+        // Debug: Log the query
+        log_message('info', 'Dashboard Query - From: ' . $from_date . ' To: ' . $to_date . ' Results: ' . count($result));
+        log_message('info', $this->db->last_query());
+        
+        return $result;
     }
 
     /**
@@ -189,25 +194,21 @@ class Production_dashboard_model extends CI_Model
     {
         $this->db->select('
             COUNT(*) as total_batches,
-            SUM(CASE WHEN status = "Approved" THEN 1 ELSE 0 END) as approved_batches,
-            SUM(CASE WHEN status = "Draft" THEN 1 ELSE 0 END) as draft_batches,
-            SUM(CASE WHEN status = "Cancelled" THEN 1 ELSE 0 END) as cancelled_batches,
             SUM(produced_quantity) as total_output,
             SUM(total_cost) as total_cost,
             AVG(cost_per_unit) as avg_cost_per_unit,
-            MIN(created_at) as first_batch_date,
-            MAX(created_at) as last_batch_date
+            MIN(approved_at) as first_batch_date,
+            MAX(approved_at) as last_batch_date
         ');
         $this->db->from('production_batches');
         
-        $this->db->where('DATE(created_at) >=', $from_date);
-        $this->db->where('DATE(created_at) <=', $to_date);
+        // Always filter by Approved status and use approved_at for date range
+        $this->db->where('status', 'Approved');
+        $this->db->where('approved_at IS NOT NULL');
+        $this->db->where('DATE(approved_at) >=', $from_date);
+        $this->db->where('DATE(approved_at) <=', $to_date);
         
-        // Apply optional filters
-        if (isset($filters['status']) && $filters['status']) {
-            $this->db->where('status', $filters['status']);
-        }
-        
+        // Apply optional filters (recipe_id, warehouse_id)
         if (isset($filters['recipe_id']) && $filters['recipe_id']) {
             $this->db->where('recipe_id', $filters['recipe_id']);
         }
@@ -218,11 +219,12 @@ class Production_dashboard_model extends CI_Model
         
         $result = $this->db->get()->row();
         
+        // For status breakdown - always Approved in this view, but include zeros for others
         return (object) array(
             'total_batches' => (int) ($result->total_batches ?? 0),
-            'approved_batches' => (int) ($result->approved_batches ?? 0),
-            'draft_batches' => (int) ($result->draft_batches ?? 0),
-            'cancelled_batches' => (int) ($result->cancelled_batches ?? 0),
+            'approved_batches' => (int) ($result->total_batches ?? 0),  // All filtered results are Approved
+            'draft_batches' => 0,
+            'cancelled_batches' => 0,
             'total_output' => (float) ($result->total_output ?? 0),
             'total_cost' => (float) ($result->total_cost ?? 0),
             'avg_cost_per_unit' => (float) ($result->avg_cost_per_unit ?? 0),

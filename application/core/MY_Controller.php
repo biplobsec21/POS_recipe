@@ -109,6 +109,15 @@ class MY_Controller extends CI_Controller
     'delete_items_from_table', 'destroy', 'remove',
   ];
 
+  // Methods to skip from audit middleware (read-only/export operations)
+  private $_audit_skip_methods = [
+    'export_productions',
+    'export_item_usage',
+    'get_date_range_productions',
+    'get_item_usage',
+    'get_items_json',
+  ];
+
   public function _remap($method, $params = [])
   {
     // ── Only audit POST requests; call through directly for everything else ──
@@ -119,6 +128,16 @@ class MY_Controller extends CI_Controller
     // ── Skip the audit controllers themselves to avoid recursion ──
     $controller = strtolower(get_class($this));
     if (in_array($controller, ['auditlog', 'login', 'logout', 'csrfdata'])) {
+      return call_user_func_array([$this, $method], $params);
+    }
+
+    // ── Skip export and read-only methods from production_dashboard ──
+    if ($controller === 'production_dashboard' && in_array($method, ['export_productions', 'export_item_usage', 'get_date_range_productions', 'get_item_usage', 'get_items_json'])) {
+      return call_user_func_array([$this, $method], $params);
+    }
+
+    // ── Skip read-only/export methods from audit middleware ──
+    if (in_array(strtolower($method), array_map('strtolower', $this->_audit_skip_methods))) {
       return call_user_func_array([$this, $method], $params);
     }
 

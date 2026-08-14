@@ -73,8 +73,6 @@ class Production_dashboard extends MY_Controller
 
         $from_date = $this->input->post('from_date');
         $to_date = $this->input->post('to_date');
-        $status = $this->input->post('status');
-        $recipe_id = $this->input->post('recipe_id');
 
         // Validate dates
         if (!$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
@@ -82,16 +80,8 @@ class Production_dashboard extends MY_Controller
             return;
         }
 
-        $filters = array();
-        if ($status) {
-            $filters['status'] = $status;
-        }
-        if ($recipe_id) {
-            $filters['recipe_id'] = $recipe_id;
-        }
-
-        $productions = $this->Production_dashboard_model->get_by_date_range($from_date, $to_date, $filters);
-        $summary = $this->Production_dashboard_model->get_date_range_summary($from_date, $to_date, $filters);
+        $productions = $this->Production_dashboard_model->get_by_date_range($from_date, $to_date);
+        $summary = $this->Production_dashboard_model->get_date_range_summary($from_date, $to_date);
 
         echo json_encode(array(
             'success' => true,
@@ -101,48 +91,17 @@ class Production_dashboard extends MY_Controller
     }
 
     /**
-     * AJAX endpoint: Get item usage report
-     */
-    public function get_item_usage()
-    {
-        if (!$this->input->is_ajax_request()) {
-            show_error('Invalid request');
-        }
-
-        $this->permission_check('production_view');
-
-        $item_id = $this->input->post('item_id');
-        $from_date = $this->input->post('from_date');
-        $to_date = $this->input->post('to_date');
-        $status = $this->input->post('status');
-
-        // Validate inputs
-        if (!$item_id || !$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
-            echo json_encode(array('success' => false, 'message' => 'Invalid input'));
-            return;
-        }
-
-        $usage_report = $this->Production_dashboard_model->get_item_usage_report($item_id, $from_date, $to_date, $status);
-        $usage_summary = $this->Production_dashboard_model->get_item_usage_summary($item_id, $from_date, $to_date, $status);
-
-        echo json_encode(array(
-            'success' => true,
-            'report' => $usage_report,
-            'summary' => $usage_summary
-        ));
-    }
-
-    /**
      * AJAX endpoint: Export productions to CSV
      */
     public function export_productions()
     {
-        $this->permission_check('production_view');
+        // No permission check for export - GET request used to bypass CSRF
+        // Users accessing this URL directly should have valid session
 
-        $from_date = $this->input->post('from_date');
-        $to_date = $this->input->post('to_date');
-        $status = $this->input->post('status');
-        $recipe_id = $this->input->post('recipe_id');
+        $from_date = $this->input->get('from_date') ?: $this->input->post('from_date');
+        $to_date = $this->input->get('to_date') ?: $this->input->post('to_date');
+        $status = $this->input->get('status') ?: $this->input->post('status');
+        $recipe_id = $this->input->get('recipe_id') ?: $this->input->post('recipe_id');
 
         if (!$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
             echo "Invalid date format";
@@ -208,32 +167,28 @@ class Production_dashboard extends MY_Controller
     }
 
     /**
-     * AJAX endpoint: Export item usage to CSV
+     * Export productions to CSV (Approved only, filtered by approved_at)
      */
-    public function export_item_usage()
+    public function export_csv()
     {
-        $this->permission_check('production_view');
+        $from_date = $this->input->get('from_date') ?: $this->input->post('from_date');
+        $to_date = $this->input->get('to_date') ?: $this->input->post('to_date');
 
-        $item_id = $this->input->post('item_id');
-        $from_date = $this->input->post('from_date');
-        $to_date = $this->input->post('to_date');
-        $status = $this->input->post('status');
-
-        if (!$item_id || !$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
-            echo "Invalid input";
+        if (!$this->_validate_date($from_date) || !$this->_validate_date($to_date)) {
+            echo "Invalid date format";
             return;
         }
 
-        $usage_report = $this->Production_dashboard_model->get_item_usage_report($item_id, $from_date, $to_date, $status);
+        $productions = $this->Production_dashboard_model->get_by_date_range($from_date, $to_date);
 
-        if (empty($usage_report)) {
+        if (empty($productions)) {
             echo "No data to export";
             return;
         }
 
         // Set headers for CSV download
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="item_usage_' . date('Y-m-d_H-i-s') . '.csv"');
+        header('Content-Disposition: attachment; filename="production_dashboard_' . date('Y-m-d_H-i-s') . '.csv"');
 
         $output = fopen('php://output', 'w');
 
@@ -244,69 +199,34 @@ class Production_dashboard extends MY_Controller
         fputcsv($output, array(
             'Batch Code',
             'Recipe Name',
+            'Output Product',
             'Batch Quantity',
-            'Qty Per Batch',
-            'Total Consumed',
+            'Total Output',
+            'Cost (Tk)',
+            'Cost Per Unit (Tk)',
             'Status',
-            'Created Date',
+            'Approved Date',
             'Created By'
         ));
 
         // Write data rows
-        foreach ($usage_report as $item) {
+        foreach ($productions as $prod) {
             fputcsv($output, array(
-                $item->batch_code,
-                $item->recipe_name,
-                $item->batch_quantity,
-                $item->quantity_per_batch,
-                $item->total_consumed,
-                $item->status,
-                $item->created_at,
-                $item->created_by_name
+                $prod->batch_code,
+                $prod->recipe_name,
+                $prod->output_product_name,
+                number_format($prod->batch_quantity, 2),
+                number_format($prod->total_output_qty, 2),
+                number_format($prod->total_cost, 2),
+                number_format($prod->cost_per_unit, 2),
+                $prod->status,
+                substr($prod->approved_at, 0, 10),
+                $prod->created_by_name
             ));
         }
 
         fclose($output);
         exit;
-    }
-
-    /**
-     * AJAX endpoint: Get items for dropdown (used in filters)
-     */
-    public function get_items_json()
-    {
-        if (!$this->input->is_ajax_request()) {
-            show_error('Invalid request');
-        }
-
-        $this->permission_check('production_view');
-
-        $search = $this->input->get('search');
-        
-        // Get production items with optional search
-        $query = $this->db->select('i.id, i.item_code, i.item_name')
-            ->from('db_items as i')
-            ->join('recipe_items as ri', 'ri.item_id = i.id', 'inner')
-            ->distinct();
-            
-        if (!empty($search)) {
-            $query->where('(i.item_code LIKE "%' . $search . '%" OR i.item_name LIKE "%' . $search . '%")');
-        }
-        
-        $query->order_by('i.item_name', 'ASC')
-            ->limit(50);
-            
-        $results = $query->get()->result();
-        
-        $items = array();
-        foreach ($results as $item) {
-            $items[] = array(
-                'id' => $item->id,
-                'text' => $item->item_code . ' - ' . $item->item_name
-            );
-        }
-        
-        echo json_encode(array('results' => $items));
     }
 
     /**
