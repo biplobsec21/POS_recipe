@@ -850,7 +850,12 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
             // Show loading state in modal
             $('#batch-details-body').html('<tr><td colspan="7" style="text-align: center; padding: 40px;"><i class="fa fa-spinner fa-spin"></i> Loading batch details...</td></tr>');
-            $('#batch-details-modal-title').text('Batch Details: ' + itemName);
+            $('#batch-details-modal-title').text('Batch Details: ' + itemName + ' (Period: ' + from_date + ' to ' + to_date + ')');
+            
+            // Store dates for printing
+            $('#batch-details-modal-title').data('from_date', from_date);
+            $('#batch-details-modal-title').data('to_date', to_date);
+            
             $('#batchDetailsModal').modal('show');
 
             // AJAX call to get batch details
@@ -913,6 +918,47 @@ defined('BASEPATH') or exit('No direct script access allowed');
                 html = '<tr><td colspan="7" style="text-align: center; padding: 30px; color: #999;">No batch records found for this item in the selected period</td></tr>';
             }
             $('#batch-details-body').html(html);
+        }
+
+        /**
+         * Print batch details modal content
+         */
+        function printBatchDetails() {
+            var title = $('#batch-details-modal-title').text();
+            var from_date = $('#batch-details-modal-title').data('from_date') || 'N/A';
+            var to_date = $('#batch-details-modal-title').data('to_date') || 'N/A';
+            var content = $('#batch-details-body').html();
+            
+            // Create a new window for printing
+            var printWindow = window.open('', '', 'height=600,width=900');
+            printWindow.document.write('<html><head><title>Print - ' + title + '</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: Arial, sans-serif; margin: 20px; }');
+            printWindow.document.write('h2 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }');
+            printWindow.document.write('.date-range { color: #666; font-size: 14px; margin-bottom: 10px; font-weight: 500; }');
+            printWindow.document.write('.print-time { color: #999; font-size: 12px; margin-bottom: 20px; }');
+            printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
+            printWindow.document.write('th { background-color: #f3f4f6; padding: 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600; }');
+            printWindow.document.write('td { padding: 10px; border: 1px solid #e5e7eb; }');
+            printWindow.document.write('tr:nth-child(even) { background-color: #f9fafb; }');
+            printWindow.document.write('.text-right { text-align: right; }');
+            printWindow.document.write('@media print { body { margin: 0; } }');
+            printWindow.document.write('</style></head><body>');
+            printWindow.document.write('<h2>' + title + '</h2>');
+            printWindow.document.write('<div class="date-range"><strong>Period:</strong> ' + from_date + ' to ' + to_date + '</div>');
+            printWindow.document.write('<div class="print-time">Printed on: ' + new Date().toLocaleString() + '</div>');
+            printWindow.document.write('<table>');
+            printWindow.document.write('<thead><tr><th>Batch #</th><th>Recipe</th><th>Output Product</th><th>Unit</th><th class="text-right">Batch Qty</th><th class="text-right">Item Used</th><th>Date</th></tr></thead>');
+            printWindow.document.write('<tbody>' + content + '</tbody>');
+            printWindow.document.write('</table>');
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            
+            // Wait a moment for content to render, then print
+            setTimeout(function() {
+                printWindow.print();
+                printWindow.close();
+            }, 250);
         }
 
         /**
@@ -1008,6 +1054,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
                     </div>
                 </div>
                 <div class="modal-footer" style="background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+                    <button type="button" class="btn btn-info" onclick="printBatchDetails()">
+                        <i class="fa fa-print"></i> Print
+                    </button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                 </div>
             </div>
