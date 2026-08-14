@@ -102,7 +102,7 @@ class Production_item_report extends MY_Controller
             'Batch Quantity',
             'Qty Per Batch',
             'Total Consumed',
-            'Status',
+            'Approved Date',
             'Created Date',
             'Created By'
         ));
@@ -112,11 +112,11 @@ class Production_item_report extends MY_Controller
             fputcsv($output, array(
                 $item->batch_code,
                 $item->recipe_name,
-                $item->batch_quantity,
-                $item->quantity_per_batch,
-                $item->total_consumed,
-                $item->status,
-                $item->created_at,
+                number_format($item->batch_quantity, 3),
+                number_format($item->quantity_per_batch, 3),
+                number_format($item->total_consumed, 3),
+                substr($item->approved_at, 0, 10),
+                substr($item->created_at, 0, 10),
                 $item->created_by_name
             ));
         }

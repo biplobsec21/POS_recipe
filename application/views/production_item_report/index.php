@@ -107,10 +107,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
                             </div>
 
                             <div class="box-body">
-                                <form id="filter-form" class="form-horizontal">
-                                    <div class="form-group">
-                                        <label class="col-sm-2 control-label">From Date</label>
-                                        <div class="col-sm-2">
+                                <form id="filter-form">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label>From Date</label>
                                             <div class="input-group date">
                                                 <div class="input-group-addon">
                                                     <i class="fa fa-calendar"></i>
@@ -119,8 +119,8 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                             </div>
                                         </div>
 
-                                        <label class="col-sm-2 control-label">To Date</label>
-                                        <div class="col-sm-2">
+                                        <div class="col-md-3">
+                                            <label>To Date</label>
                                             <div class="input-group date">
                                                 <div class="input-group-addon">
                                                     <i class="fa fa-calendar"></i>
@@ -128,19 +128,17 @@ defined('BASEPATH') or exit('No direct script access allowed');
                                                 <input type="text" class="form-control datepicker" id="to_date" name="to_date" value="<?= show_date($to_date); ?>">
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div class="form-group">
-                                        <label class="col-sm-2 control-label">Item</label>
-                                        <div class="col-sm-8">
+                                        <div class="col-md-6">
+                                            <label>Item</label>
                                             <select class="form-control select2" id="item_id" style="width: 100%;">
                                                 <option value="">Select Item</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <div class="form-group">
-                                        <div class="col-sm-12">
+                                    <div class="row" style="margin-top: 15px;">
+                                        <div class="col-md-12">
                                             <button type="button" class="btn btn-primary" onclick="applyFilters()">
                                                 <i class="fa fa-search"></i> Apply Filters
                                             </button>
@@ -357,25 +355,26 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
                         var html = '<div class="item-usage-header">';
                         html += '<strong>' + summary.item_code + ' - ' + summary.item_name + '</strong><br>';
-                        html += 'Total Consumed: <strong>' + parseFloat(summary.total_consumed).toFixed(2) + '</strong> units | ';
+                        html += 'Total Consumed: <strong>' + parseFloat(summary.total_consumed).toFixed(3) + '</strong> units | ';
                         html += 'Used in <strong>' + summary.production_count + '</strong> productions';
                         html += '</div>';
 
                         if (report.length > 0) {
                             html += '<div class="table-responsive"><table class="table table-bordered table-striped">';
                             html += '<thead class="bg-primary"><tr>';
-                            html += '<th>Batch Code</th><th>Recipe</th><th>Batch Qty</th>';
-                            html += '<th>Qty Per Batch</th><th>Total Consumed</th>';
-                            html += '<th>Created Date</th><th>Created By</th>';
+                            html += '<th>Batch Code</th><th>Recipe</th><th class="text-right">Batch Qty</th>';
+                            html += '<th class="text-right">Qty Per Batch</th><th class="text-right">Total Consumed</th>';
+                            html += '<th>Approved Date</th><th>Created Date</th><th>Created By</th>';
                             html += '</tr></thead><tbody>';
 
                             $.each(report, function(i, item) {
                                 html += '<tr>';
-                                html += '<td><strong>' + item.batch_code + '</strong></td>';
+                                html += '<td><strong><a href="' + base_url + 'production/view/' + item.id + '" target="_blank" style="color: #667eea; text-decoration: none;">' + item.batch_code + '</a></strong></td>';
                                 html += '<td>' + item.recipe_name + '</td>';
-                                html += '<td class="text-right">' + parseFloat(item.batch_quantity).toFixed(2) + '</td>';
-                                html += '<td class="text-right">' + parseFloat(item.quantity_per_batch).toFixed(2) + '</td>';
-                                html += '<td class="text-right"><strong>' + parseFloat(item.total_consumed).toFixed(2) + '</strong></td>';
+                                html += '<td class="text-right">' + parseFloat(item.batch_quantity).toFixed(3) + '</td>';
+                                html += '<td class="text-right">' + parseFloat(item.quantity_per_batch).toFixed(3) + '</td>';
+                                html += '<td class="text-right"><strong>' + parseFloat(item.total_consumed).toFixed(3) + '</strong></td>';
+                                html += '<td>' + item.approved_at.substring(0, 10) + '</td>';
                                 html += '<td>' + item.created_at.substring(0, 10) + '</td>';
                                 html += '<td>' + item.created_by_name + '</td>';
                                 html += '</tr>';

@@ -23,6 +23,7 @@ class Production_item_report_model extends CI_Model
             pb.batch_quantity,
             pb.status,
             pb.created_at,
+            pb.approved_at,
             r.recipe_name,
             i.item_name,
             i.item_code,
