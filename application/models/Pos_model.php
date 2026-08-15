@@ -467,17 +467,30 @@ class Pos_model extends CI_Model
 	// }
 	public function update_items_quantity($item_id)
 	{
-    // Instead of 5 separate queries with wrong filters
-    // Use the complete, accurate stock_history calculation
+		// Instead of 5 separate queries with wrong filters
+		// Use the complete, accurate stock_history calculation
 
-		$this->load->model('stock_history_model');
-		$summary = $this->stock_history_model->get_stock_summary($item_id);
-		$current_stock = (float) $summary['current_stock'];
+		try {
+			$this->load->model('stock_history_model');
+			$summary = $this->stock_history_model->get_stock_summary($item_id);
+			
+			// Validate that we got a summary
+			if (!is_array($summary) || !isset($summary['current_stock'])) {
+				log_message('error', 'update_items_quantity: Invalid summary for item_id=' . $item_id);
+				return false;
+			}
+			
+			$current_stock = (float) $summary['current_stock'];
 
-		$this->db->where('id', $item_id);
-		$this->db->update('db_items', ['stock' => $current_stock]);
-
-		return ($this->db->affected_rows() > 0) ? true : false;
+			$this->db->where('id', $item_id);
+			$result = $this->db->update('db_items', array('stock' => $current_stock));
+			
+			// Return true if update was executed without error, even if no rows were affected
+			return ($result !== false) ? true : false;
+		} catch (Exception $e) {
+			log_message('error', 'update_items_quantity Exception: ' . $e->getMessage() . ' for item_id=' . $item_id);
+			return false;
+		}
 	}
 
 	public function edit_pos($sales_id)

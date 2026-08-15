@@ -415,3 +415,23 @@ class Stock_history_model extends CI_Model
         return $query ? $query->row() : null;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

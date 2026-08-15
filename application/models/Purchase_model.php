@@ -181,15 +181,23 @@ class Purchase_model extends CI_Model
 				'tot_discount_to_all_amt' 	=> $tot_discount_to_all_amt,
 				/*Subtotal & Total */
 				'subtotal' 					=> $tot_subtotal_amt,
-				'round_off' 				=> $tot_round_off_amt,
+				'round_off' 					=> $tot_round_off_amt,
 				'grand_total' 				=> $tot_total_amt,
 				'purchase_note' 			=> $purchase_note,
 			);
 
 			$q1 = $this->db->where('id', $purchase_id)->update('db_purchase', $purchase_entry);
+			
+			if (!$q1) {
+				$this->db->trans_rollback();
+				log_message('error', 'Purchase Update Failed: Could not update db_purchase for id=' . $purchase_id);
+				return "failed";
+			}
 
 			$q11 = $this->db->query("delete from db_purchaseitems where purchase_id='$purchase_id'");
 			if (!$q11) {
+				$this->db->trans_rollback();
+				log_message('error', 'Purchase Update Failed: Could not delete db_purchaseitems for purchase_id=' . $purchase_id);
 				return "failed";
 			}
 		}
@@ -247,10 +255,18 @@ class Purchase_model extends CI_Model
 
 				$q2 = $this->db->insert('db_purchaseitems', $purchaseitems_entry);
 
+				if (!$q2) {
+					$this->db->trans_rollback();
+					log_message('error', 'Purchase Save Failed: Could not insert purchase item for purchase_id=' . $purchase_id . ', item_id=' . $item_id);
+					return "failed";
+				}
+
 				//UPDATE itemS QUANTITY IN itemS TABLE
 				$this->load->model('pos_model');
 				$q6 = $this->pos_model->update_items_quantity($item_id);
 				if (!$q6) {
+					$this->db->trans_rollback();
+					log_message('error', 'Purchase Save Failed: update_items_quantity failed for item_id=' . $item_id);
 					return "failed";
 				}
 
@@ -288,6 +304,14 @@ class Purchase_model extends CI_Model
 
 		$q10 = $this->update_purchase_payment_status($purchase_id, $supplier_id);
 		if (!$q10) {
+			$this->db->trans_rollback();
+			log_message('error', 'Purchase Save Failed: update_purchase_payment_status returned false for purchase_id=' . $purchase_id . ', supplier_id=' . $supplier_id);
+			return "failed";
+		}
+
+		if ($this->db->trans_status() === FALSE) {
+			$this->db->trans_rollback();
+			log_message('error', 'Purchase Save Failed: Transaction status is FALSE');
 			return "failed";
 		}
 
