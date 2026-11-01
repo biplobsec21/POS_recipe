@@ -50,6 +50,9 @@
                                     <span id="import_file_msg" style="display:block;" class="text-danger">
                                       Note: File must be in CSV format.
                                     </span>
+                                    <span style="display:block;">
+                                      CSV columns are matched by header; Lot Number is optional.
+                                    </span>
                                  </div>
                               </div>
                            </div>
@@ -290,4 +293,3 @@
       <script>$(".<?php echo basename(__FILE__,'.php');?>-active-li").addClass("active");</script>
    </body>
 </html>
-

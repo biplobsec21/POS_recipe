@@ -333,23 +333,59 @@ class Import extends MY_Controller
 
 
             $file = fopen('uploads/csv/items/' . $file_name, "r");
+            $header = fgetcsv($file, NULL, ",");
+            if ($header === false) {
+                fclose($file);
+                echo 'The CSV file is empty.';
+                return;
+            }
+
+            $header_aliases = array(
+                'item name' => 'item_name',
+                'category' => 'category_name',
+                'category name' => 'category_name',
+                'sku' => 'sku',
+                'hsn' => 'hsn',
+                'unit name' => 'unit_name',
+                'alert quantity' => 'alert_qty',
+                'brand name' => 'brand_name',
+                'lot number' => 'lot_number',
+                'expire date' => 'expire_date',
+                'purchase price' => 'purchase_price',
+                'tax name' => 'tax_name',
+                'tax value' => 'tax_value',
+                'tax type' => 'tax_type',
+                'sales price' => 'sales_price',
+                'sale price' => 'sales_price',
+                'opening stock' => 'opening_stock',
+                'barcode' => 'barcode',
+                'discount type' => 'discount_type',
+                'discount' => 'discount',
+            );
+            $column_indexes = array();
+            foreach ($header as $index => $column_name) {
+                $column_name = strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', (string)$column_name)));
+                if (isset($header_aliases[$column_name])) {
+                    $column_indexes[$header_aliases[$column_name]] = $index;
+                }
+            }
 
             //Save flag
             $flag = true;
             $this->db->trans_begin();
-            $i = 1;
             while (($importdata = fgetcsv($file, NULL, ",")) !== FALSE) {
-                if ($i++ == 1) {
-                    continue;
-                }
+                $get_value = function ($column, $legacy_index) use ($importdata, $column_indexes) {
+                    $index = isset($column_indexes[$column]) ? $column_indexes[$column] : $legacy_index;
+                    return $index !== null && isset($importdata[$index]) ? trim((string)$importdata[$index]) : '';
+                };
 
                 //Item name should not be empty
-                if (empty($importdata[0])) {
+                $item_name = $get_value('item_name', 0);
+                if ($item_name === '') {
                     continue;
                 }
 
                 //$importdata = $this->xss_html_filter($importdata);
-                $item_name = $importdata[0];
                 //Validate This items already exist or not
                 /*$item_count=$this->db->query("select count(*) as item_count from db_items where upper(item_name)=upper('$item_name')")->row()->item_count;
                         
@@ -359,11 +395,22 @@ class Import extends MY_Controller
                         }*/
 
 
-                $category_name = $importdata[1];
-                $unit_name = $importdata[4];
-                $brand_name = $importdata[6];
-                $tax_name = $importdata[9];
-                $tax_per = (float)$importdata[10];
+                $category_name = $get_value('category_name', 1);
+                $sku = $get_value('sku', 2);
+                $hsn = $get_value('hsn', 3);
+                $unit_name = $get_value('unit_name', 4);
+                $brand_name = $get_value('brand_name', 6);
+                $lot_number = $get_value('lot_number', null);
+                $expire_date_value = $get_value('expire_date', 7);
+                $price = (float)$get_value('purchase_price', 8);
+                $tax_name = $get_value('tax_name', 9);
+                $tax_per = (float)$get_value('tax_value', 10);
+                $tax_type_value = $get_value('tax_type', 11);
+                $sales_price = (float)$get_value('sales_price', 12);
+                $opening_stock = (float)$get_value('opening_stock', 13);
+                $barcode = $get_value('barcode', 14);
+                $discount_type = $get_value('discount_type', 15);
+                $discount = (float)$get_value('discount', 16);
                 $category_id = (!empty($category_name)) ? $this->get_category_id($category_name) : null;
                 $unit_id = (!empty($unit_name)) ? $this->get_unit_id($unit_name) : null;
                 $brand_id = (!empty($brand_name)) ? $this->get_brand_id($brand_name) : null;
@@ -381,10 +428,7 @@ class Import extends MY_Controller
                 $item_code = $item_init . str_pad($maxid, 4, '0', STR_PAD_LEFT);
                 //end
 
-                $tax_per        = (float)($importdata[10] ?? 0);
-                $price          = (float)($importdata[8]  ?? 0);
-                $sales_price    = (float)($importdata[12] ?? 0);
-                $tax_type       = strtolower(trim((string)($importdata[11] ?? 'exclusive')));
+                $tax_type = strtolower(trim($tax_type_value !== '' ? $tax_type_value : 'exclusive'));
 
                 $purchase_price = (float)$price;
                 if ($tax_type === 'exclusive') {
@@ -397,26 +441,26 @@ class Import extends MY_Controller
 
                 $row = array(
                     'item_code'         =>  $item_code,
-                    'item_name'         =>  $item_name, //0
-                    'category_id'       =>  $category_id, //1
-                    'sku'               =>  !empty($importdata[2]) ? $importdata[2] : '',
-                    'hsn'               =>  !empty($importdata[3]) ? $importdata[3] : '',
-                    'unit_id'           =>  $unit_id, //4
-                    'alert_qty'         =>  !empty($importdata[5]) ? (float)$importdata[5] : 0,
-                    'brand_id'          =>  $brand_id, //6
-                    //'lot_number'        =>  !empty($importdata[7])?$importdata[7]:'',
-                    'expire_date'       =>  !empty($importdata[7]) ? date("Y-m-d", strtotime($importdata[7])) : null,
+                    'item_name'         =>  $item_name,
+                    'category_id'       =>  $category_id,
+                    'sku'               =>  $sku,
+                    'hsn'               =>  $hsn,
+                    'unit_id'           =>  $unit_id,
+                    'alert_qty'         =>  (float)$get_value('alert_qty', 5),
+                    'brand_id'          =>  $brand_id,
+                    'lot_number'        =>  $lot_number !== '' ? $lot_number : null,
+                    'expire_date'       =>  $expire_date_value !== '' ? date("Y-m-d", strtotime($expire_date_value)) : null,
                     'price'             =>  $price,
-                    'tax_id'            =>  $tax_id, //10 //ok
-                    'purchase_price'    =>  $purchase_price, //Calculate autocalculate
-                    'tax_type'          =>  !empty($importdata[11]) ? $importdata[11] : 'Exclusive', //ok
-                    'sales_price'       =>  $sales_price, //ok
-                    'profit_margin'     =>  $profit_margin, //ok
-                    'stock'             =>  !empty($importdata[13]) ? (float)$importdata[13] : 0, //ok
-                    'custom_barcode'    =>  !empty($importdata[14]) ? (float)$importdata[14] : 0, //ok
-                    'discount_type'     =>  !empty($importdata[15]) ? (float)$importdata[15] : 0, //ok
-                    'discount'          =>  !empty($importdata[16]) ? (float)$importdata[16] : 0, //ok
-                    'final_price'       =>  $final_price, //ok
+                    'tax_id'            =>  $tax_id,
+                    'purchase_price'    =>  $purchase_price,
+                    'tax_type'          =>  $tax_type_value !== '' ? $tax_type_value : 'Exclusive',
+                    'sales_price'       =>  $sales_price,
+                    'profit_margin'     =>  $profit_margin,
+                    'stock'             =>  $opening_stock,
+                    'custom_barcode'    =>  $barcode !== '' ? $barcode : null,
+                    'discount_type'     =>  $discount_type !== '' ? $discount_type : null,
+                    'discount'          =>  $discount,
+                    'final_price'       =>  $final_price,
 
                     /*System Info*/
                     'created_date'              => $CUR_DATE,
@@ -437,11 +481,11 @@ class Import extends MY_Controller
                     $flag = false;
                 }
                 $item_id = $this->db->insert_id();
-                if (!empty($importdata[13]) && $importdata[13] > 0) {
+                if ($opening_stock > 0) {
                     $info = array(
                         'entry_date'            => $CUR_DATE,
                         'item_id'               => $item_id,
-                        'qty'                   => $importdata[13],
+                        'qty'                   => $opening_stock,
                         'status'                => 1,
                     );
 
